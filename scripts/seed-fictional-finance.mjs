@@ -14,39 +14,39 @@ async function query(table, action = "select", extra = {}) {
  return value.data;
 }
 const id = name => prefix + name;
-const categoryNames = ["구독 서비스", "사무 운영", "회의·식비", "이동·배송", "제작·장비", "수입"];
+const categoryNames = ["Subscriptions", "Office operations", "Meals & meetings", "Travel & delivery", "Equipment", "Income"];
 const categories = categoryNames.map((name, i) => ({ id: id(`category-${i + 1}`), key: `custom:${name}` }));
 const key = i => categories[i].key;
 const definitions = [
- ["노을상자 클라우드 (가상)", 0, "exact", 10], ["별가루 보드 (가상)", 0, "exact", 10], ["달송 문서 (가상)", 0, "exact", 10],
- ["종이섬", 1, "contains", 40], ["모래정원", 1, "contains", 40], ["구름접시", 2, "contains", 40], ["모서리", 3, "contains", 40], ["빛결", 4, "contains", 40], ["민트달", 5, "contains", 40],
+ ["Nimbus Cloud (fictional)", 0, "exact", 10], ["Orbit Board (fictional)", 0, "exact", 10], ["Maple Docs (fictional)", 0, "exact", 10],
+ ["Paper Island", 1, "contains", 40], ["Sand Garden", 1, "contains", 40], ["Cloud Table", 2, "contains", 40], ["Corner", 3, "contains", 40], ["Beam", 4, "contains", 40], ["Mint Moon", 5, "contains", 40],
 ];
 const rules = definitions.map(([pattern, c, match_mode, priority], i) => ({ id: id(`rule-${i + 1}`), pattern, category: key(c), match_mode, priority }));
 const budgets = [450000, 350000, 500000, 200000, 1100000].map((amount, i) => ({ id: id(`budget-${i + 1}`), category: key(i), amount }));
 // Three August subscriptions supply the original recurring detector's three-month history.
 const cardRows = [
- ["08-02", "노을상자 클라우드 (가상)", 129000], ["08-04", "별가루 보드 (가상)", 39000], ["08-08", "달송 문서 (가상)", 24000],
- ["09-02", "노을상자 클라우드 (가상)", 129000], ["09-04", "별가루 보드 (가상)", 39000], ["09-08", "달송 문서 (가상)", 24000],
- ["09-03", "종이섬 가상문구", 84000], ["09-07", "구름접시 가상식당", 58000], ["09-10", "모서리 가상이동", 23000], ["09-12", "빛결 가상공방", 360000],
- ["09-16", "구름접시 가상식당", 76000], ["09-20", "종이섬 가상문구", 42000], ["09-24", "파도상점 (가상)", 68000], ["09-26", "모서리 가상배송", 17000], ["09-28", "구름접시 가상식당", 64000],
- ["10-02", "노을상자 클라우드 (가상)", 129000], ["10-04", "별가루 보드 (가상)", 39000], ["10-08", "달송 문서 (가상)", 24000],
- ["10-01", "빛결 가상공방", 829000], ["10-03", "구름접시 가상식당", 78000], ["10-05", "종이섬 가상문구", 146000], ["10-07", "모서리 가상이동", 32000],
- ["10-09", "구름접시 가상식당", 96000], ["10-10", "빛결 가상공방", 215000], ["10-12", "종이섬 가상문구", 62000], ["10-14", "구름접시 가상식당", 84000],
- ["10-15", "파도상점 (가상)", 47000], ["10-16", "모서리 가상배송", 19000], ["10-18", "구름접시 가상식당", 112000], ["10-19", "초승조각 (가상)", 55000],
+ ["08-02", "Nimbus Cloud (fictional)", 129000], ["08-04", "Orbit Board (fictional)", 39000], ["08-08", "Maple Docs (fictional)", 24000],
+ ["09-02", "Nimbus Cloud (fictional)", 129000], ["09-04", "Orbit Board (fictional)", 39000], ["09-08", "Maple Docs (fictional)", 24000],
+ ["09-03", "Paper Island (fictional)", 84000], ["09-07", "Cloud Table (fictional)", 58000], ["09-10", "Corner Transit (fictional)", 23000], ["09-12", "Beam Workshop (fictional)", 360000],
+ ["09-16", "Cloud Table (fictional)", 76000], ["09-20", "Paper Island (fictional)", 42000], ["09-24", "Wave Store (fictional)", 68000], ["09-26", "Corner Delivery (fictional)", 17000], ["09-28", "Cloud Table (fictional)", 64000],
+ ["10-02", "Nimbus Cloud (fictional)", 129000], ["10-04", "Orbit Board (fictional)", 39000], ["10-08", "Maple Docs (fictional)", 24000],
+ ["10-01", "Beam Workshop (fictional)", 829000], ["10-03", "Cloud Table (fictional)", 78000], ["10-05", "Paper Island (fictional)", 146000], ["10-07", "Corner Transit (fictional)", 32000],
+ ["10-09", "Cloud Table (fictional)", 96000], ["10-10", "Beam Workshop (fictional)", 215000], ["10-12", "Paper Island (fictional)", 62000], ["10-14", "Cloud Table (fictional)", 84000],
+ ["10-15", "Wave Store (fictional)", 47000], ["10-16", "Corner Delivery (fictional)", 19000], ["10-18", "Cloud Table (fictional)", 112000], ["10-19", "Crescent Goods (fictional)", 55000],
 ];
-const cards = cardRows.map(([day, merchant, amount], i) => ({ id: id(`card-${String(i + 1).padStart(2, "0")}`), dedupe_key: id(`card-${i + 1}`), approval_date: `2026-${day}`, purchase_date: `2026-${day}`, month: `2026-${day.slice(0, 2)}`, merchant, amount, status: "", source_file: "FICTIONAL_가상카드.xlsx", remarks: "FICTIONAL — 공개 예시용 가상 거래", card_meta: { "승인구분": "국내" } }));
+const cards = cardRows.map(([day, merchant, amount], i) => ({ id: id(`card-${String(i + 1).padStart(2, "0")}`), dedupe_key: id(`card-${i + 1}`), approval_date: `2026-${day}`, purchase_date: `2026-${day}`, month: `2026-${day.slice(0, 2)}`, merchant, amount, status: "", source_file: "FICTIONAL_company_card.xlsx", remarks: "FICTIONAL — illustrative transaction", card_meta: { "승인구분": "국내" } }));
 const bankRows = [
- ["09-01", "가상 운영계좌.xlsx", "초기 운영자금 (가상)", 8000000, null, 8000000],
- ["09-05", "가상 운영계좌.xlsx", "모래정원 가상공간", null, 800000, 7200000],
- ["09-25", "가상 운영계좌.xlsx", "민트달 가상고객", 2400000, null, 9600000],
- ["10-01", "가상 운영계좌.xlsx", "민트달 가상고객", 1800000, null, 11400000],
- ["10-05", "가상 운영계좌.xlsx", "모래정원 가상공간", null, 800000, 10600000],
- ["10-10", "가상 운영계좌.xlsx", "빛결 가상공방", null, 250000, 10350000],
- ["10-18", "가상 운영계좌.xlsx", "민트달 가상고객", 2200000, null, 12550000],
- ["09-03", "가상 적립계좌.xlsx", "초기 적립금 (가상)", 2000000, null, 2000000],
- ["10-13", "가상 적립계좌.xlsx", "적립 이자 (가상)", 8000, null, 2008000],
+ ["09-01", "FICTIONAL_operations.xlsx", "Opening funds (fictional)", 8000000, null, 8000000],
+ ["09-05", "FICTIONAL_operations.xlsx", "Sand Garden Space (fictional)", null, 800000, 7200000],
+ ["09-25", "FICTIONAL_operations.xlsx", "Mint Moon Client (fictional)", 2400000, null, 9600000],
+ ["10-01", "FICTIONAL_operations.xlsx", "Mint Moon Client (fictional)", 1800000, null, 11400000],
+ ["10-05", "FICTIONAL_operations.xlsx", "Sand Garden Space (fictional)", null, 800000, 10600000],
+ ["10-10", "FICTIONAL_operations.xlsx", "Beam Workshop (fictional)", null, 250000, 10350000],
+ ["10-18", "FICTIONAL_operations.xlsx", "Mint Moon Client (fictional)", 2200000, null, 12550000],
+ ["09-03", "FICTIONAL_savings.xlsx", "Opening savings (fictional)", 2000000, null, 2000000],
+ ["10-13", "FICTIONAL_savings.xlsx", "Interest (fictional)", 8000, null, 2008000],
 ];
-const bank = bankRows.map(([day, source_file, counterparty, deposit, withdrawal, balance], i) => ({ id: id(`bank-${i + 1}`), dedupe_key: id(`bank-${i + 1}`), tx_date: `2026-${day}`, tx_time: "10:00:00", source_file, counterparty, deposit, withdrawal, balance, memo: "FICTIONAL — 공개 예시용 가상 거래" }));
+const bank = bankRows.map(([day, source_file, counterparty, deposit, withdrawal, balance], i) => ({ id: id(`bank-${i + 1}`), dedupe_key: id(`bank-${i + 1}`), tx_date: `2026-${day}`, tx_time: "10:00:00", source_file, counterparty, deposit, withdrawal, balance, memo: "FICTIONAL — illustrative transaction" }));
 const dataset = { finance_categories: categories, spend_rules: rules, finance_budgets: budgets, card_charges: cards, bank_transactions: bank };
 let manifest;
 try { manifest = JSON.parse(await readFile(manifestPath, "utf8")); } catch (error) { if (error.code !== "ENOENT") throw error; }

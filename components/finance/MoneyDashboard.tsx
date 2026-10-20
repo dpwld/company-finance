@@ -69,31 +69,31 @@ export function MoneyDashboard({ month, bank, cards, splits, onNav, onReview, on
     <div className="money-dash">
       <div className="money-stack">
         <section className="money-card">
-          <p className="money-label">이번 달 카드 순사용액</p>
+          <p className="money-label">Net card spending this month</p>
           <div className="money-amount">{wonFmt(spent)}</div>
           <p className={`money-trend${diff > 0 ? " money-negative" : ""}`}>
-            {prev === null ? "전월과 비교하는 중입니다."
-              : prevSpent === 0 ? "전월 지출 기록이 없습니다."
-                : diff === 0 ? "전월과 같습니다."
-                  : `전월보다 ${wonFmt(Math.abs(diff))} ${diff > 0 ? "더" : "덜"} 썼습니다`}
+            {prev === null ? "Comparing with last month…"
+              : prevSpent === 0 ? "No spending recorded last month."
+                : diff === 0 ? "Same as last month."
+                  : `Compared with last month: ${wonFmt(Math.abs(diff))} ${diff > 0 ? "more" : "less"} spent`}
           </p>
-          {totals.unknownAmountCount > 0 && <p className="money-note money-negative">원화 미확정 {totals.unknownAmountCount}건은 합계에 포함되지 않았습니다.</p>}
+          {totals.unknownAmountCount > 0 && <p className="money-note money-negative">KRW amount pending {totals.unknownAmountCount} records excluded from totals.</p>}
           <MoneyTrendChart current={current} previous={previous} month={month} />
           <div className="money-legend">
-            <span><i />선택한 달</span>
-            <span><i style={{ background: "#c7c7c7" }} />전월</span>
+            <span><i />Selected month</span>
+            <span><i style={{ background: "#c7c7c7" }} />Last month</span>
           </div>
         </section>
 
         <section className="money-card">
           <div className="money-card-header">
-            <h2>최근 거래</h2>
-            <button type="button" className="money-text-button" onClick={() => onNav("tx")}>모두 보기 →</button>
+            <h2>Recent transactions</h2>
+            <button type="button" className="money-text-button" onClick={() => onNav("tx")}>View all →</button>
           </div>
-          {recent.length === 0 ? <p className="money-empty">이 달의 거래가 없습니다.</p> : recent.map((r) => {
+          {recent.length === 0 ? <p className="money-empty">No transactions this month.</p> : recent.map((r) => {
             const cat = spendCategory(r.category);
             return (
-              <button key={r.key} type="button" className="money-tx" aria-label={`${r.name} 거래 상세`} onClick={() => onOpenTransaction(r)}>
+              <button key={r.key} type="button" className="money-tx" aria-label={`${r.name} Transaction details`} onClick={() => onOpenTransaction(r)}>
                 <span className="money-merchant-icon">{cat?.emoji ?? "₩"}</span>
                 <span className="money-merchant-info">
                   <span className="money-merchant-name">{r.name}</span>
@@ -102,7 +102,7 @@ export function MoneyDashboard({ month, bank, cards, splits, onNav, onReview, on
                   </span>
                 </span>
                 <span className={`money-tx-amount${(r.amount ?? 0) > 0 ? "" : " money-negative"}`}>
-                  {r.amount == null ? "원화 미확정" : `${r.amount > 0 ? "+" : ""}${wonFmt(Math.abs(r.amount))}`}
+                  {r.amount == null ? "KRW amount pending" : `${r.amount > 0 ? "+" : ""}${wonFmt(Math.abs(r.amount))}`}
                 </span>
               </button>
             );
@@ -119,10 +119,10 @@ export function MoneyDashboard({ month, bank, cards, splits, onNav, onReview, on
 
         <section className="money-card">
           <div className="money-card-header">
-            <h2>카테고리별 지출</h2>
-            <button type="button" className="money-text-button" onClick={() => onNav("spend")}>자세히 보기 →</button>
+            <h2>Spending by category</h2>
+            <button type="button" className="money-text-button" onClick={() => onNav("spend")}>View details →</button>
           </div>
-          {topCategories.length === 0 ? <p className="money-empty">분류된 지출이 없습니다.</p> : topCategories.map(([key, amount]) => {
+          {topCategories.length === 0 ? <p className="money-empty">No categorized spending yet.</p> : topCategories.map(([key, amount]) => {
             const cat = spendCategory(key);
             return (
               <div key={key} className="money-summary-row">

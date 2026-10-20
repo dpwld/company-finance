@@ -5,7 +5,7 @@ async function api(body,auth=true){return fetch(base+"/api/data",{method:"POST",
 async function data(body){const response=await api(body);const value=await response.json();assert(response.ok,JSON.stringify(value));return value.data;}
 try{
  assert.equal((await api({table:"finance_budgets",action:"select"},false)).status,401);
- const html=await fetch(base+"/",{headers:{Cookie:cookie}});assert.equal(html.status,200);assert((await html.text()).includes("사업비 메뉴"));
+ const html=await fetch(base+"/",{headers:{Cookie:cookie}});assert.equal(html.status,200);assert((await html.text()).includes("Finance navigation"));
  for(const route of ["/api/finance/classify","/api/finance/rcms-registration","/api/lumos"]){assert.equal((await fetch(base+route,{method:"POST",headers:{Cookie:cookie,"Content-Type":"application/json"},body:"{}"})).status,404);}
  const cat=(await data({table:"finance_categories",action:"insert",rows:{key:category}}))[0];created.push(["finance_categories",cat.id]);
  const budget=(await data({table:"finance_budgets",action:"upsert",rows:{category,amount:1234}}))[0];created.push(["finance_budgets",budget.id]);

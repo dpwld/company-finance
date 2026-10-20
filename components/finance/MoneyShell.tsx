@@ -15,12 +15,12 @@ export interface MoneyNavItem {
 }
 
 export const MONEY_NAV: MoneyNavItem[] = [
-  { id: "home", label: "대시보드", glyph: "▦" },
-  { id: "recurring", label: "반복 결제", glyph: "↻" },
-  { id: "spend", label: "지출 분석", glyph: "◴" },
-  { id: "budget", label: "예산", glyph: "◉" },
-  { id: "accounts", label: "계좌·카드", glyph: "▤" },
-  { id: "tx", label: "거래 내역", glyph: "≡" },
+  { id: "home", label: "Dashboard", glyph: "▦" },
+  { id: "recurring", label: "Recurring payments", glyph: "↻" },
+  { id: "spend", label: "Spending", glyph: "◴" },
+  { id: "budget", label: "Budget", glyph: "◉" },
+  { id: "accounts", label: "Accounts & cards", glyph: "▤" },
+  { id: "tx", label: "Transactions", glyph: "≡" },
 ];
 
 interface Props {
@@ -41,9 +41,9 @@ export function MoneyShell({ nav, onNav, title, subtitle, actions, who, children
       <aside className="money-aside">
         <div className="money-brand">
           <b>₩</b>
-          <div>Company Finance<small>MONEY · 한국 자산</small></div>
+          <div>Company Finance<small>BUSINESS BOOKKEEPING</small></div>
         </div>
-        <nav className="money-nav" aria-label="사업비 메뉴">
+        <nav className="money-nav" aria-label="Finance navigation">
           {MONEY_NAV.map((item) => (
             <button
               key={item.id}
@@ -59,7 +59,7 @@ export function MoneyShell({ nav, onNav, title, subtitle, actions, who, children
         </nav>
         <div className="money-profile">
           <span className="money-avatar">₩</span>{who}
-          <div style={{ marginTop: 8 }}>명세서 기반 · KRW</div>
+          <div style={{ marginTop: 8 }}>Statement-based · KRW</div>
         </div>
       </aside>
 

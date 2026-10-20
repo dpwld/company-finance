@@ -14,10 +14,10 @@ export const recordRuleTexts = (table: string, row: any): string[] => table === 
 export function validateCategoryProposals(value: unknown, cardIds: string[], bankIds: string[], categories: string[]) {
  const input=value as {cards?:{id:string;category:string}[];bank?:{id:string;category:string}[]};
  const validate=(rows:unknown,ids:string[])=>{
-  if(!Array.isArray(rows)) throw new Error("AI 제안 형식이 올바르지 않습니다.");
+  if(!Array.isArray(rows)) throw new Error("The AI response has an invalid format.");
   const seen=new Set<string>();
   return rows.map(row=>{
-   if(!row || typeof row.id!=="string" || !ids.includes(row.id) || seen.has(row.id) || typeof row.category!=="string" || row.category!==""&&!categories.includes(row.category)) throw new Error("AI가 본인 거래·카테고리 범위를 벗어났습니다.");
+   if(!row || typeof row.id!=="string" || !ids.includes(row.id) || seen.has(row.id) || typeof row.category!=="string" || row.category!==""&&!categories.includes(row.category)) throw new Error("The AI response includes transactions or categories outside your account.");
    seen.add(row.id);return {id:row.id,category:row.category};
   });
  };

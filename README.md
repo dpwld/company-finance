@@ -1,106 +1,104 @@
 # Company Finance
 
-Company Finance는 본인 은행·카드 명세서를 가져와 거래, 사용자 분류 규칙, 지출과 예산을 관리하는 독립 웹서비스입니다.
+Statement-based bookkeeping for small companies. Import bank and card activity, define your own categories and rules, and track spending, balances, recurring payments and budgets.
 
-[준비 항목](#먼저-준비할-api--계정--데이터) · [로컬 실행](#로컬-실행) · [업무 흐름](#업무-흐름) · [예시 자료](#가상-예시-자료) · [검증과 범위](#검증과-범위)
+English · [한국어](README.ko.md)
 
-![Company Finance 대시보드 실행 화면](docs/images/overview.png)
+[Quickstart](#quickstart) · [Requirements](#requirements) · [Data formats](#supported-data) · [Self-hosting](docs/SELF-HOSTING.md) · [Contributing](CONTRIBUTING.md)
 
-*화면의 거래·거래처·계좌·분류·예산은 모두 FICTIONAL 가상 예시입니다. 실제 회사 자료가 아닙니다. 신규 데이터베이스는 비어 있으며 예시 자료를 자동으로 넣지 않습니다.*
+![Company Finance dashboard](docs/images/overview.png)
 
-## 먼저 준비할 API · 계정 · 데이터
+*Fictional demonstration data in a real local service. Installation starts with an empty database; examples are never inserted automatically.*
 
-| 준비 항목 | 설정 이름 | 필요한 기능 | 연결 전 동작 |
-|---|---|---|---|
-| Sites의 ChatGPT 로그인 | 플랫폼 인증 헤더, 사용자 계정 | 본인 데이터 조회·변경 | 로그인 필요. 로컬 모의 로그인은 루프백 개발 환경 전용 |
-| Cloudflare D1 | `DB` 바인딩 | 거래·카테고리·분류 규칙·예산 영구 저장 | DB 연결과 마이그레이션 필요 |
-| Cloudflare R2 | `BUCKET` 바인딩 | 증빙 파일 업로드·다운로드 | 거래·예산 사용 가능. 파일 기능은 설정 오류 표시 |
-| 선택: 본인 OpenAI API 계정 | `OPENAI_API_KEY`, `OPENAI_MODEL` | 거래 화면의 명시적인 AI 분류 제안 | 수동 분류와 사용자 규칙은 사용 가능. AI는 설정 오류 표시 |
-| 본인 카테고리와 규칙 | 화면 상단 `분류 규칙` | 직접 만든 분류·예산·자동 규칙 | 기본 카테고리·가맹점 키워드 규칙 없음. 일치하지 않으면 미분류 |
+## Quickstart
 
-외부 유료 API 없이 명세서 가져오기, 중복 방지, 거래 조회·메모·분개 편집, 카테고리·규칙 관리, 규칙 미리보기·적용, 예산, 지출·반복결제·계좌 분석, 거래 분할, CSV·JSON 내보내기를 사용할 수 있습니다. 증빙은 R2가 필요합니다. 금융기관/국세청 로그인 연동은 없으며 사용자가 내려받은 파일을 가져옵니다.
-
-| 가져올 본인 자료 | 형식과 필수 식별 항목 |
-|---|---|
-| KB 국민카드 결제예정금액/매입·승인 내역 | `.xlsx`, `.xls`, `.csv`; `승인일`, `가맹점명`, `합계` 또는 `승인금액`. 원화 미확정 해외 결제는 금액 null 유지. 승인번호가 있으면 중복 식별에 사용 |
-| KB 은행 거래내역 / 정리본 | `.xlsx`, `.xls`, `.csv`; 감지 필수 열 `거래일시`, `출금액`(단위 접미사 허용). `입금액`, `보낸분/받는분` 또는 `내용`, `적요`를 보존. `잔액`은 선택. 파일 이름을 계좌 출처로 표시하며 특별한 파일명 키워드는 필요 없음 |
-| 홈택스 전자세금계산서 목록 | `.xlsx`, `.xls`, `.csv`; `작성일자`, `공급가액` 또는 `합계금액`; `세액`, `공급자상호`(매입)/`공급받는자상호`(매출), `승인번호`. 파일명/시트명에 `매출` 또는 `매입` 포함. 파싱한 목록은 서버 저장 및 JSON 백업에 포함 |
-| 영수증·증빙 | PDF, 이미지, Office·한글 문서 등, 20MB 미만. 파일명에서 날짜·거래처를 찾으면 연결할 거래를 제안하고 사용자가 확인 후 저장 |
-
-세부 헤더 별칭과 형식 감지는 `lib/finance/parse.ts`에 있습니다. 모든 임의 CSV를 자동 해석하는 기능은 없습니다. 거래 자료는 미리보기 후 확정합니다. 분류는 파일의 회사 전용 처리 열에서 가져오지 않고 사용자가 만든 규칙 또는 직접 편집한 값만 사용합니다.
-
-## 로컬 실행
-
-Node.js 22.13 이상과 npm을 준비합니다.
+Prerequisites: **Git, Node.js 22.13+ and npm**. Repository access is currently required because the project is private.
 
 ```sh
+git clone https://github.com/dpwld/company-finance.git
+cd company-finance
 npm ci
-npm run build
-npm run db:migrate
-npm run dev -- --port 5173
+npm run setup
+npm run dev
 ```
 
-`http://127.0.0.1:5173`에서 로컬 ChatGPT 로그인 버튼으로 접속합니다. `db:migrate`는 `wrangler.local.json`의 `DB`에 커밋된 Drizzle 마이그레이션을 순서대로 적용합니다. 두 번째 실행은 이미 적용한 마이그레이션을 건너뜁니다. 마이그레이션, Vite 개발 서버와 `npm start`는 동일한 DB 식별자와 `.wrangler/state`를 사용합니다. 요청 처리 중 DDL을 실행하지 않습니다.
+Open the printed loopback address, normally `http://127.0.0.1:5173`. Local development needs no ChatGPT account or paid API keys. Setup builds the service and applies committed local database migrations without overwriting records or inserting samples.
 
-`npm start`는 빌드된 Worker 실행용입니다. 플랫폼 인증 프록시가 없는 로컬 환경에서는 모의 로그인을 제공하지 않으므로 위 개발 명령을 사용하세요. 스키마를 바꿀 때만 `npm run db:generate`로 새 마이그레이션을 생성합니다.
+Start with **Category rules** to create your categories, then import a supported statement and review the import preview. Saved rules categorize new transactions automatically. Existing transactions change only after an explicit preview and apply action.
 
-AI를 연결하려면 [`.env.example`](.env.example)을 `.dev.vars`로 복사해 본인 값만 입력하고 서버를 다시 실행합니다. 핵심 기능에는 이 파일이 필요하지 않습니다.
+See [Installation](docs/INSTALLATION.md) for updating and troubleshooting, or [Self-hosting](docs/SELF-HOSTING.md) to configure your own Cloudflare resources and authentication. The author's hosted service and Site ID are not required for your own deployment.
 
-```dotenv
-OPENAI_API_KEY=
-OPENAI_MODEL=
-```
+## Requirements
 
-배포에서는 플랫폼의 서버 Secret 설정을 사용합니다. `NEXT_PUBLIC_*` 변수에 비밀값을 넣지 마세요. Sites 호스팅은 `d1: DB`, `r2: BUCKET`을 사용하며 운영 마이그레이션과 Secret 연결은 배포 담당자가 실행해야 합니다.
+| Dependency | Used for | Without it |
+|---|---|---|
+| D1 binding `DB` | Transactions, categories, rules, budgets and settings | Required; local setup prepares an emulated database |
+| R2 binding `BUCKET` | Receipt uploads and downloads | Core bookkeeping works; file actions report missing storage |
+| Production authentication | User-scoped data | Use Cloudflare Access for your own deployment, or Sites authentication on Sites |
+| Your categories and rules | Categorization and budgets | No preset categories or hidden merchant rules; unmatched records remain uncategorized |
+| Optional `OPENAI_API_KEY`, `OPENAI_MODEL` | Explicit AI category suggestions | Manual categories and deterministic rules work without AI |
 
-## 업무 흐름
+Copy [`.env.example`](.env.example) to the ignored `.dev.vars` only when configuring optional APIs. Add your own credentials and restart the local server. Production secrets belong in the deployment provider's secret store, never browser variables.
 
-| 화면·기능 | 실제 동작 |
+## Supported data
+
+The interface is English. Source records retain their original language and currency. This release supports **KRW statements with the following Korean source headers**; it does not connect directly to bank or tax accounts.
+
+| Source | File format and expected fields |
 |---|---|
-| 대시보드 | 월별 카드 순사용액·누적 추이·미분류·계좌 잔액·최근 거래에서 상세로 이동 |
-| 반복 결제 | 같은 거래명이 3개월 이상 등장한 실제 카드 이력을 표시 |
-| 지출 분석 | 카드 순사용액의 분류별 합계·전월 비교·6개월 추이·거래 이동 |
-| 예산 | 본인이 만든 카테고리에 월 공통 예산 입력·저장, 카드 사용액과 비교 |
-| 계좌·카드 | 명세서 출처별 최신 잔액과 이후 입출금, 국내/해외 카드 순사용액 |
-| 거래 내역 | 월/전체 기간·검색·유형·카테고리 필터, CSV, 메모·분개·수동 분류·분할·증빙 |
-| 분류 규칙 | 카테고리 추가·이름 변경·삭제, 규칙 추가·수정·삭제, 전체 기간 미분류 미리보기 후 적용 |
+| KB card statements | XLSX, XLS or CSV with `승인일`, `가맹점명`, and `합계` or `승인금액`. Approval numbers are used for duplicate detection when present. Unknown KRW amounts remain null. |
+| KB bank statements | XLSX, XLS or CSV with `거래일시` and `출금액` (unit suffixes allowed); also reads deposits, counterparty, description and optional balance. The source filename identifies the account. |
+| Hometax tax invoices | XLSX, XLS or CSV with `작성일자`, `공급가액` or `합계금액`; reads tax, counterparty and approval number. Include `매출` (sales) or `매입` (purchase) in the filename/sheet name. Included in stored records and JSON backup. |
+| Receipts | PDF, images and office documents under 20 MB. Filename-based suggestions require you to review and confirm the linked transaction. |
 
-카드 지출은 매입일(없으면 승인일)의 달력월 기준이며 음수 취소·환급을 차감합니다. 원화 미확정액은 합계에서 제외합니다. 통장 입출금·잔액은 별도로 표시해 카드대금이 지출에 이중 합산되지 않습니다. 계좌는 파일 출처별로 묶이므로 같은 계좌를 기간별 다른 파일명으로 가져오면 별도 출처로 표시됩니다.
+Header aliases and format detection are in [`lib/finance/parse.ts`](lib/finance/parse.ts). Arbitrary CSV formats are not automatically interpreted. Company-specific classification columns are ignored; categories come from your own rules or edits.
 
-규칙은 가맹점명(없으면 품목명), 은행 상대처명(없으면 적요)을 비교합니다. 앞뒤 공백·대소문자를 무시하고 `정확히 일치` 또는 `문구 포함`으로 판정합니다. 우선순위 숫자가 작은 규칙이 먼저이며 동률은 규칙 ID 순서입니다. 일치하지 않으면 미분류로 남습니다. 새 거래에는 저장된 규칙을 자동 적용하고, 기존 거래는 미리보기 후 적용합니다. 직접 저장한 분류는 덮어쓰지 않습니다. 규칙 삭제가 과거에 저장한 분류를 취소하지는 않습니다.
+## Workflows
 
-카테고리 이름 변경은 연결된 거래·분할·규칙·예산을 함께 갱신합니다. 사용 중인 카테고리는 연결을 해제한 뒤 삭제합니다. 선택적인 AI는 서버에 저장된 본인 거래와 본인 카테고리만 사용하고, 제안 검토 후 적용합니다. AI가 만든 카테고리나 숨은 가맹점 규칙을 저장하지 않습니다.
+| Area | What you can do |
+|---|---|
+| Dashboard | Inspect net card spending, trends, uncategorized activity, bank balances and recent transactions |
+| Recurring payments | Find merchants appearing in at least three months; inspect actual payment history |
+| Spending | Explore category shares, previous-month comparisons and six-month trends |
+| Budget | Save monthly category limits and compare them with net card spending |
+| Accounts & cards | Review source-file account balances and domestic/international card spending |
+| Transactions | Search/filter across months, export CSV, edit notes and journal fields, categorize, split and link receipts |
+| Categories & rules | Create/rename/delete categories; create/edit/delete exact or contains rules; preview and apply to uncategorized history |
 
-![Company Finance 사용자 카테고리와 규칙 미리보기](docs/images/classification-rules.png)
+**Calculation boundaries.** Card spending uses the posting month (approval date if unavailable), including negative refunds and cancellations. Unknown KRW amounts are excluded from totals. Bank cash flow remains separate to avoid counting card settlement twice. Different source filenames are separate accounts.
 
-*FICTIONAL 가상 예시: 사용자가 만든 카테고리와 정확히 일치하는 규칙을 미리 본 뒤 적용합니다. 실제 회사 자료가 아닙니다.*
+**Rule behavior.** Rules compare merchant/counterparty names, falling back to item/description. Matching ignores case and surrounding spaces. Lower priority numbers run first; ties use rule ID order. Manual categories are preserved. Renaming a category updates linked transactions, splits, rules and budgets; in-use categories cannot be deleted until detached. Optional AI is restricted to your saved transactions and categories and requires review before applying.
 
-## 가상 예시 자료
+![User-defined category rules](docs/images/classification-rules.png)
 
-README 화면을 재현하려면 별도의 **루프백 5182 로컬 개발 서버**에서만 다음 도구를 명시적으로 실행합니다. 실제 D1 API를 사용하며 호스팅 URL을 거부합니다. 기존 ID·카테고리·규칙 충돌이 있으면 덮어쓰지 않고 중단합니다.
+*Fictional categories and transaction names. No company rules or business data are included.*
+
+## Example screenshots
+
+Use an isolated local preview on **port 5182**. The helper rejects hosted URLs, records created IDs and refuses collisions.
 
 ```sh
 npm run dev -- --port 5182
-# 다른 터미널에서 실행
+# In another terminal:
 node scripts/seed-fictional-finance.mjs seed http://127.0.0.1:5182
 node scripts/seed-fictional-finance.mjs status http://127.0.0.1:5182
-# 촬영 후 예시 자료만 제거
+# Remove only the helper's recorded example data:
 node scripts/seed-fictional-finance.mjs cleanup http://127.0.0.1:5182
 ```
 
-FICTIONAL 거래 30건(반복 결제 확인용 8월 3건, 9월 12건, 10월 15건), 통장 9건, 사용자 카테고리 6개·규칙 9개·예산 5개입니다. 실제 회사 식별번호·연락처·계좌번호는 없습니다. 생성 ID 목록과 원래 건수는 무시되는 로컬 파일 `.sites-runtime/fictional-finance-manifest.json`에 보관합니다. 정리는 그 목록의 ID만 삭제하고 `.sites-runtime/fictional-finance-cleanup.json`에 정리 기록을 남깁니다. 앱은 이 도구를 자동 실행하지 않습니다.
+Examples contain 30 card transactions, 9 bank transactions, 6 categories, 9 rules and 5 budgets. Names are invented. No real account numbers, contacts or identifiers are used. The ignored `.sites-runtime/fictional-finance-manifest.json` tracks cleanup; keep it until cleanup completes.
 
-## 검증과 범위
-
-React/Vinext의 기존 핵심 화면 → 인증된 API → 사용자별 D1 `finance_records` 구조입니다. 증빙 파일은 사용자별 R2 경로로 저장합니다. 서버 키는 브라우저로 보내지 않습니다. 원래 파서·금액/잔액/중복 처리와 핵심 화면 구조를 유지하고 저장소를 HTTP/D1로 교체했습니다.
+## Development and verification
 
 ```sh
 npm run typecheck
 npm test
+node --test tests/deployment-auth.test.mjs tests/deployment-config.test.mjs
 npm run build
-FINANCE_TEST_URL=http://127.0.0.1:5173 node scripts/test-http.mjs
+# With the local development server on port 5182:
+node scripts/test-http.mjs
 ```
 
-테스트는 실제 임시 Miniflare D1에서 분류 규칙 CRUD·우선순위·미리보기/적용·사용자 격리·재시작 후 유지, 동시 필드 수정, 분할 금액 보호, 최신 명세 잔액, 파서를 검증합니다. HTTP 검증은 임시 원장·증빙을 만들고 정리합니다. 외부 유료 AI 호출은 하지 않습니다.
+React/Vinext UI → authenticated APIs → owner-scoped D1 records. R2 files are owner-checked. Tests cover actual temporary D1 persistence, rule precedence/preview/apply, duplicate imports, invalid-input preservation, atomic field updates, splits, invoice integrity, balances and original statement parsers. HTTP checks cover sign-in requirements, origin rejection, D1 mutations and R2 bytes, and clean up their test records. Paid AI calls are not part of QA.
 
-최종 범위는 여섯 핵심 화면입니다. TIPS, 연구비 요청·요청 내역·사후 증빙, 내부 지출 분석, RCMS 가져오기/등록, 과제·회사 설정과 해당 서버 어댑터는 사용자 요청에 따라 제거했습니다. [기능 범위](docs/FEATURE-PARITY.md)와 [구현·검증 보고서](docs/IMPLEMENTATION-REPORT.md)에 남은 제한을 기록합니다. 대규모 원장 성능, 유료 AI 결과, 실제 금융기관 연결을 검증했다고 주장하지 않습니다. SheetJS 0.20.2와 폰트·스타터의 원래 라이선스를 보존하며 소스 저작권 안내는 [LICENSE](LICENSE)를 확인하세요.
+The six core screens exclude research-grant finance workflows. See [feature scope](docs/FEATURE-PARITY.md) and [implementation report](docs/IMPLEMENTATION-REPORT.md). Cross-account team sharing, live bank connections and arbitrary multi-currency bookkeeping are not implemented. Preserve [source notices](LICENSE) and bundled third-party notices when reusing the code.

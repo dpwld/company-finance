@@ -7,7 +7,7 @@ import { wonFmt } from "@/lib/finance/spend";
    번들만 커지고 모양은 오히려 안 맞아서 같은 방식으로 간다. */
 
 const shortWon = (v: number) =>
-  Math.abs(v) >= 10000 ? `${Math.round(v / 10000).toLocaleString("ko-KR")}만` : Math.round(v).toLocaleString("ko-KR");
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(v);
 
 /** 선택한 달 vs 전월 누적 지출. 전월은 비교 기준선이라 회색 점선으로 깔린다. */
 export function MoneyTrendChart({ current, previous, month }: { current: number[]; previous: number[]; month: string }) {
@@ -19,12 +19,12 @@ export function MoneyTrendChart({ current, previous, month }: { current: number[
   const x = (i: number) => PAD.l + (i / Math.max(1, lastDay)) * (W - PAD.l - PAD.r);
   const y = (v: number) => PAD.t + (1 - (v - min) / (max - min)) * (H - PAD.t - PAD.b);
   const path = (xs: number[]) => xs.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
-  const label = `${Number(month.slice(5, 7))}월`;
+  const label = new Date(month + "-01T00:00:00").toLocaleDateString("en-US", { month: "short" });
 
   return (
     <div style={{ position: "relative" }}>
       <svg className="money-chart" viewBox={`0 0 ${W} ${H}`} role="img"
-        aria-label={`${label} 누적 지출과 전월 비교`}
+        aria-label={`${label} cumulative spending compared with last month`}
         onMouseLeave={() => setHover(null)}
         onMouseMove={(e) => {
           const box = e.currentTarget.getBoundingClientRect();
@@ -40,15 +40,15 @@ export function MoneyTrendChart({ current, previous, month }: { current: number[
           </g>
         ))}
         <path d={path(previousAligned)} fill="none" stroke="#c7c7c7" strokeWidth="2" strokeDasharray="4 4" strokeLinejoin="round" />
-        <path d={path(current)} fill="none" stroke="#616161" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        <path d={path(current)} fill="none" stroke="#0284c7" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         {hover != null && (
           <>
             <line x1={x(hover)} x2={x(hover)} y1={PAD.t} y2={H - PAD.b} stroke="#d9d9d9" strokeWidth="1" />
-            <circle cx={x(hover)} cy={y(current[hover])} r="4.5" fill="#616161" stroke="#ffffff" strokeWidth="2" />
+            <circle cx={x(hover)} cy={y(current[hover])} r="4.5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
           </>
         )}
         {[0, 7, 14, 21, lastDay].map((i) => (
-          <text key={i} x={x(i)} y={H - 7} fontSize="11" fill="#797979" textAnchor="middle">{i + 1}일</text>
+          <text key={i} x={x(i)} y={H - 7} fontSize="11" fill="#797979" textAnchor="middle">{i + 1}</text>
         ))}
       </svg>
       {hover != null && (
@@ -57,9 +57,9 @@ export function MoneyTrendChart({ current, previous, month }: { current: number[
           pointerEvents: "none", background: "#ffffff", border: "1px solid #eeeeee", borderRadius: 10,
           padding: "8px 11px", fontSize: 12, whiteSpace: "nowrap", boxShadow: "0 6px 18px #20232914",
         }}>
-          <b>{hover + 1}일</b>
-          <div style={{ color: "#616161" }}>{label} {wonFmt(current[hover])}</div>
-          <div style={{ color: "#797979" }}>전월 {wonFmt(previousAligned[hover])}</div>
+          <b>{label} {hover + 1}</b>
+          <div style={{ color: "#0284c7" }}>{label} {wonFmt(current[hover])}</div>
+          <div style={{ color: "#797979" }}>Last month {wonFmt(previousAligned[hover])}</div>
         </div>
       )}
     </div>
@@ -78,10 +78,10 @@ export function MoneyDonut({ slices, total }: { slices: { key: string; label: st
   }
   return (
     <div className="money-donut-layout">
-      <div className="money-donut" role="img" aria-label={`카테고리별 지출 비중, 총 ${wonFmt(total)}`}
+      <div className="money-donut" role="img" aria-label={`Spending by category, total ${wonFmt(total)}`}
         style={{ background: stops.length ? `conic-gradient(${stops.join(",")})` : "#eeeeee" }}>
         <div className="money-donut-center">
-          <span className="money-sub">전체 지출</span>
+          <span className="money-sub">Total spending</span>
           <strong>{wonFmt(total)}</strong>
         </div>
       </div>
@@ -102,13 +102,13 @@ export function MoneyMonthBars({ data, month, onPick }: {
     <div className="money-month-bars">
       {data.map((d) => (
         <button key={d.month} type="button" className={d.month === month ? "selected" : ""}
-          title={`${d.month} ${wonFmt(d.amount)} — 눌러서 이 달 지출 보기`}
+          title={`${d.month} ${wonFmt(d.amount)} — view spending for this month`}
           aria-pressed={d.month === month}
           onClick={() => onPick(d.month)}
           style={{ textAlign: "center" }}>
           <span className="money-sub" style={{ fontSize: 11 }}>{shortWon(d.amount)}</span>
           <div className="money-column" style={{ height: `${Math.max(4, (d.amount / max) * 110)}px` }} />
-          <span className="money-sub" style={{ fontSize: 12 }}>{Number(d.month.slice(5, 7))}월</span>
+          <span className="money-sub" style={{ fontSize: 12 }}>{new Date(d.month + "-01T00:00:00").toLocaleDateString("en-US", { month: "short" })}</span>
         </button>
       ))}
     </div>

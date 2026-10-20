@@ -84,7 +84,7 @@ export function MoneySpending({ month, bank, cards, splits, onMonthChange, onTra
   const largest = useMemo(() => {
     return moneyEntries(cards, bank).filter((row) => (row.amount ?? 0) > 0)
       .sort((a, b) => b.amount! - a.amount!).slice(0, 3)
-      .map((row) => ({ ...row, key: `${row.kind}${row.id}`, amount: row.amount!, cat: row.category, type: row.kind === "card" ? "카드 사용" : "통장 출금" }));
+      .map((row) => ({ ...row, key: `${row.kind}${row.id}`, amount: row.amount!, cat: row.category, type: row.kind === "card" ? "Card spending" : "Bank withdrawals" }));
   }, [cards, bank]);
 
   return (
@@ -92,18 +92,18 @@ export function MoneySpending({ month, bank, cards, splits, onMonthChange, onTra
       <div className="money-stack">
         <section className="money-card">
           <div className="money-card-header">
-            <h2>6개월 지출</h2>
+            <h2>6-month spending</h2>
             <span className="money-month">
-              <button type="button" aria-label="이전 6개월"
+              <button type="button" aria-label="Previous 6 months"
                 onClick={() => setShift({ month, offset: offset + 6 })}>‹</button>
               <span className="money-sub" style={{ minWidth: 128, textAlign: "center" }}>
                 {months[0].replace("-", ".")} ~ {months[months.length - 1].replace("-", ".")}
               </span>
-              <button type="button" aria-label="다음 6개월" disabled={offset === 0}
+              <button type="button" aria-label="Next 6 months" disabled={offset === 0}
                 onClick={() => setShift({ month, offset: Math.max(0, offset - 6) })}>›</button>
             </span>
           </div>
-          {series === null ? <p className="money-empty">불러오는 중입니다.</p>
+          {series === null ? <p className="money-empty">Loading…</p>
             : <MoneyMonthBars data={series} month={month} onPick={onMonthChange} />}
 
           <MoneyDonut
@@ -111,19 +111,19 @@ export function MoneySpending({ month, bank, cards, splits, onMonthChange, onTra
             slices={rows.map((r) => ({ key: r.key, label: r.label, value: r.amount, color: r.color }))}
           />
 
-          {rows.length === 0 ? <p className="money-empty">분류된 지출이 없습니다.</p> : (
+          {rows.length === 0 ? <p className="money-empty">No categorized spending yet.</p> : (
             <div className="money-table-wrap">
               <table>
                 <thead>
-                  <tr><th>카테고리</th><th>비중</th><th>전월 대비</th><th className="money-right">금액</th></tr>
+                  <tr><th>Category</th><th>Share</th><th>vs. last month</th><th className="money-right">Amount</th></tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.key} tabIndex={0} role="button" aria-label={`${r.label} 거래 보기`} onClick={() => onTransactions({ category: r.key || "uncategorized" })} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onTransactions({ category: r.key || "uncategorized" }); } }}>
+                    <tr key={r.key} tabIndex={0} role="button" aria-label={`${r.label} View transactions`} onClick={() => onTransactions({ category: r.key || "uncategorized" })} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onTransactions({ category: r.key || "uncategorized" }); } }}>
                       <td><i className="money-dot" style={{ background: r.color }} />{r.label}</td>
                       <td className="money-muted">{r.share.toFixed(1)}%</td>
                       <td className={r.diff > 0 ? "money-negative" : "money-trend"}>
-                        {!r.hadBefore ? "신규" : r.diff === 0 ? "—" : `${r.diff > 0 ? "+" : "−"}${wonFmt(Math.abs(r.diff))}`}
+                        {!r.hadBefore ? "New" : r.diff === 0 ? "—" : `${r.diff > 0 ? "+" : "−"}${wonFmt(Math.abs(r.diff))}`}
                       </td>
                       <td className="money-right" style={{ fontWeight: 650 }}>{wonFmt(r.amount)}</td>
                     </tr>
@@ -142,11 +142,11 @@ export function MoneySpending({ month, bank, cards, splits, onMonthChange, onTra
 
         <section className="money-card">
           <p className="money-label">LARGEST PURCHASES</p>
-          <div className="money-card-header"><h2>큰 지출</h2></div>
-          {largest.length === 0 ? <p className="money-empty">지출이 없습니다.</p> : largest.map((r) => {
+          <div className="money-card-header"><h2>Largest expenses</h2></div>
+          {largest.length === 0 ? <p className="money-empty">No spending yet.</p> : largest.map((r) => {
             const cat = spendCategory(r.cat);
             return (
-              <button key={r.key} type="button" className="money-tx" aria-label={`${r.name} 거래 상세`} onClick={() => onOpenTransaction(r)}>
+              <button key={r.key} type="button" className="money-tx" aria-label={`${r.name} Transaction details`} onClick={() => onOpenTransaction(r)}>
                 <span className="money-account-label">
                   <span className="money-merchant-icon">{cat?.emoji ?? "₩"}</span>
                   <span>

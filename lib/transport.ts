@@ -60,7 +60,7 @@ export class Builder implements PromiseLike<{
             return this.execute(this.query).then(onfulfilled, onrejected);
         return fetch("/api/data", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(this.query) }).then(async (response) => {
             const result = (await response.json() as any);
-            return response.ok ? { data: result.data, error: null } : { data: null, error: result.error ?? { message: "서버 요청 실패" } };
+            return response.ok ? { data: result.data, error: null } : { data: null, error: result.error ?? { message: "Server request failed" } };
         }).then(onfulfilled, onrejected);
     }
 }
@@ -74,7 +74,7 @@ export function createClient() {
                     const result = (await response.json() as any);
                     return response.ok ? { data: result, error: null } : { data: null, error: result.error };
                 },
-                async download(path: string) { const r = await fetch(fileUrl(bucket, path)); return r.ok ? { data: await r.blob(), error: null } : { data: null, error: new Error(((await r.json() as any)).error?.message || "파일을 읽지 못했습니다.") }; },
+                async download(path: string) { const r = await fetch(fileUrl(bucket, path)); return r.ok ? { data: await r.blob(), error: null } : { data: null, error: new Error(((await r.json() as any)).error?.message || "Could not read the file.") }; },
                 async remove(paths: string[]) { for (const path of paths) {
                     const r = await fetch(fileUrl(bucket, path), { method: "DELETE" });
                     if (!r.ok)

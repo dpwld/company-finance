@@ -19,7 +19,7 @@ interface Split { cardChargeId: string; bankTxId?: string; amount: number; spend
 
 /** Card spending and bank cash flow remain separate to avoid counting card settlements twice. */
 export function moneyEntries(cards: CardCharge[], _bank: BankTx[] = []): MoneyEntry[] {
-  return cards.map(c => ({ id: c.id, kind: "card", date: moneyCardDate(c), name: c.merchant || c.itemName || "카드 결제", amount: netCardAmount(c), category: isMoneyUncategorized(c.spendCategory) ? "" : c.spendCategory }));
+  return cards.map(c => ({ id: c.id, kind: "card", date: moneyCardDate(c), name: c.merchant || c.itemName || "Card payment", amount: netCardAmount(c), category: isMoneyUncategorized(c.spendCategory) ? "" : c.spendCategory }));
 }
 export function moneyTotals(cards: CardCharge[], bank: BankTx[], splits: Split[] = []) {
   const byCategory: Record<string, number> = {};

@@ -50,7 +50,7 @@ export const cellInputNum: React.CSSProperties = {
 
 export function fmtWon(n: number | null | undefined): string {
   if (n == null) return "";
-  return n.toLocaleString("ko-KR");
+  return n.toLocaleString("en-US");
 }
 
 /** Parse an edited amount cell ("1,234", "₩1234", "-500", "" → null).

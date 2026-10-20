@@ -28,12 +28,12 @@ import { MoneyAccounts } from "./MoneyAccounts";
 import { SpendRulesModal } from "./SpendRulesModal";
 
 const NAV_TITLE: Record<string, { title: string }> = {
-  home: { title: "한국 자산 한눈에 보기" },
-  recurring: { title: "반복 결제" },
-  spend: { title: "지출 분석" },
-  budget: { title: "예산" },
-  accounts: { title: "계좌와 자산" },
-  tx: { title: "거래 내역" },
+  home: { title: "Financial overview" },
+  recurring: { title: "Recurring payments" },
+  spend: { title: "Spending" },
+  budget: { title: "Budget" },
+  accounts: { title: "Accounts & cards" },
+  tx: { title: "Transactions" },
 };
 
 interface MonthData {
@@ -123,7 +123,7 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
       const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
       const link = document.createElement("a"); link.href = url; link.download = `finance-money-backup-${new Date().toISOString().slice(0, 10)}.json`; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch { setExportError("백업을 만들지 못했습니다. 연결과 Company Finance 조회 권한을 확인해 주세요."); }
+    } catch { setExportError("Could not create a backup. Check your connection and access to Company Finance."); }
     finally { setExporting(false); }
   }
 
@@ -172,7 +172,7 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
     <div className="sx-scroll sx-page-wide" style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 24 }}>
       <div style={{ maxWidth: 1600, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
         <div className="sx-mobile-only" style={{ padding: "8px 12px", borderRadius: "var(--radius-md)", background: "var(--surface-sunken)", border: "1px solid var(--border-subtle)", color: "var(--text-muted)", fontSize: "var(--text-xs)" }}>
-          모바일에서는 조회 전용으로 쓰는 화면입니다 · 업로드·분류 작업은 데스크톱에서 해주세요
+          Mobile is optimized for viewing. Use a desktop to import and categorize transactions.
         </div>
         {uploadError && <Alert tone="danger" title="Upload failed">{uploadError}</Alert>}
         {lastImport && <Alert tone="success" title={lastImport} />}
@@ -180,8 +180,8 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
         <MoneyShell
           nav={tab}
           onNav={(id) => { setTxFilters({}); setTab(id); }}
-          title={NAV_TITLE[tab]?.title ?? "한국 자산 한눈에 보기"}
-          subtitle={`${monthLabel(month)} 기준`}
+          title={NAV_TITLE[tab]?.title ?? "Financial overview"}
+          subtitle={monthLabel(month)}
           who={user.displayName}
           actions={
             <>
@@ -193,7 +193,7 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
                   onChange={(e) => onFile(e.target.files?.[0])}
                 />
               <MoneyMonthPicker month={month} months={months} onChange={setMonth} />
-              <button type="button" onClick={() => fileRef.current?.click()}>자료 올리기</button>
+              <button type="button" className="money-primary" onClick={() => fileRef.current?.click()}>Import statements</button>
               <EvidenceUploader
                 month={month}
                 bank={data?.bank ?? []}
@@ -201,13 +201,13 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
                 disabled={data === null}
                 onApplied={() => { reload(month); setEvVersion((v) => v + 1); }}
               />
-              <button type="button" onClick={() => { setData(null); setLoadError(false); reload(month); setEvVersion((v) => v + 1); }}>새로고침</button>
-              <button type="button" onClick={() => setRulesOpen(true)}>분류 규칙</button>
-              <button type="button" onClick={() => setHelpOpen(true)} aria-label="Company Finance 사용 안내">자료 정보</button>
+              <button type="button" onClick={() => { setData(null); setLoadError(false); reload(month); setEvVersion((v) => v + 1); }}>Refresh</button>
+              <button type="button" onClick={() => setRulesOpen(true)}>Category rules</button>
+              <button type="button" onClick={() => setHelpOpen(true)} aria-label="About Company Finance">Data guide</button>
             </>
           }
         >
-          {loadError && <Alert tone="danger" title="불러오지 못했습니다. 연결을 확인하고 새로고침 해주세요." style={{ marginBottom: 12 }} />}
+          {loadError && <Alert tone="danger" title="Could not load data. Check your connection and refresh." style={{ marginBottom: 12 }} />}
           {data === null ? (
             <div style={{ display: "grid", placeItems: "center", padding: 48 }}><Spinner /></div>
           ) : (
@@ -231,19 +231,19 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
       <Modal
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
-        title="Company Finance 사용 안내"
+        title="About Company Finance"
         size="lg"
         footer={
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button disabled={exporting} onClick={() => void exportBackup()}>{exporting ? "백업 준비 중…" : "데이터·분류 백업"}</Button>
-            <Button onClick={() => setHelpOpen(false)}>확인</Button>
+            <Button disabled={exporting} onClick={() => void exportBackup()}>{exporting ? "Preparing backup…" : "Export data & categories"}</Button>
+            <Button onClick={() => setHelpOpen(false)}>Done</Button>
           </div>
         }
       >
         {exportError && <Alert tone="danger" title={exportError} />}
-        <p>은행·카드·홈택스 파일을 검토한 뒤 가져옵니다. 같은 자료는 중복 등록하지 않습니다.</p>
-        <p>카드 순사용액은 매입일(없으면 승인일)의 달력월 기준입니다. 통장 입출금·잔액은 별도로 표시합니다.</p>
-        <p>분류는 직접 만든 카테고리와 저장한 규칙만 사용합니다. 규칙은 우선순위 숫자가 작은 순서이며, 일치하지 않으면 미분류로 남습니다. 기존 거래 적용은 분류 규칙에서 미리보기 후 실행합니다.</p>
+        <p>Review bank, card, and Hometax statements before importing. Duplicate records are skipped.</p>
+        <p>Net card spending uses the posting month, or the approval date when unavailable. Bank cash flow and balances are shown separately.</p>
+        <p>Only your categories and saved rules are used. Lower priority numbers run first; unmatched records stay uncategorized. Preview rules before applying them to existing transactions.</p>
       </Modal>
 
       <Modal
@@ -262,9 +262,9 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
         {counts && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: "var(--text-sm)" }}>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {counts.cards.length > 0 && <Badge tone="info">카드결제 {counts.cards.length}건</Badge>}
-              {counts.bank.length > 0 && <Badge tone="info">계좌거래 {counts.bank.length}건</Badge>}
-              {counts.invoices.length > 0 && <Badge tone="info">세금계산서 {counts.invoices.length}건</Badge>}
+              {counts.cards.length > 0 && <Badge tone="info">Card transactions: {counts.cards.length} records</Badge>}
+              {counts.bank.length > 0 && <Badge tone="info">Bank transactions: {counts.bank.length} records</Badge>}
+              {counts.invoices.length > 0 && <Badge tone="info">Tax invoices: {counts.invoices.length} records</Badge>}
               {counts.month && <Badge tone="neutral">{counts.month}</Badge>}
             </div>
             {counts.warnings.map((w, i) => (
@@ -272,9 +272,9 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
             ))}
             <div style={{ color: "var(--text-muted)", fontSize: "var(--text-xs)" }}>
               {[
-                ...counts.cards.slice(0, 5).map((c) => `카드 · ${c.approval_date ?? "N/A"} · ${c.merchant} · ${fmtWon(c.amount)}원`),
-                ...counts.bank.slice(0, 5).map((b) => `계좌 · ${b.tx_date} · ${b.counterparty} · ${fmtWon(b.withdrawal ?? b.deposit)}원`),
-                ...counts.invoices.slice(0, 5).map((v) => `계산서 · ${v.issue_date} · ${v.counterparty_name} · ${fmtWon(v.total_amount)}원`),
+                ...counts.cards.slice(0, 5).map((c) => `Card · ${c.approval_date ?? "N/A"} · ${c.merchant} · ${fmtWon(c.amount)} KRW`),
+                ...counts.bank.slice(0, 5).map((b) => `Bank · ${b.tx_date} · ${b.counterparty} · ${fmtWon(b.withdrawal ?? b.deposit)} KRW`),
+                ...counts.invoices.slice(0, 5).map((v) => `Invoice · ${v.issue_date} · ${v.counterparty_name} · ${fmtWon(v.total_amount)} KRW`),
               ].map((line, i) => (
                 <div key={i} style={{ padding: "2px 0" }}>{line}</div>
               ))}

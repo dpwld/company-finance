@@ -284,10 +284,10 @@ export async function parseFinanceFile(file: File): Promise<ParseResult> {
         });
       }
       if (!/매출|매입/.test(file.name + name)) {
-        result.warnings.push(`"${name}": 매출/매입 구분을 파일명에서 찾지 못해 매입으로 처리했어요. 파일명에 '매출' 또는 '매입'을 포함해 주세요.`);
+        result.warnings.push(`"${name}": Could not detect invoice direction. Imported as purchases. Include the Korean sales or purchase marker in the filename (see the data format guide).`);
       }
     } else if (headers.length) {
-      result.warnings.push(`"${name}" 시트는 인식하지 못했어요 (헤더: ${headers.slice(0, 6).join(", ")}…).`);
+      result.warnings.push(`Sheet "${name}" was not recognized (headers: ${headers.slice(0, 6).join(", ")}…).`);
     }
   }
 
@@ -322,7 +322,7 @@ export async function parseFinanceFile(file: File): Promise<ParseResult> {
     ?? topBill ?? guessMonth(result.bank.map((b) => b.tx_date));
 
   if (!result.cards.length && !result.bank.length && !result.invoices.length) {
-    throw new Error("인식 가능한 시트가 없어요: 결제예정금액조회.xlsx 또는 홈택스 세금계산서 목록 파일을 올려주세요.");
+    throw new Error("No supported sheets found. Upload a KB card, KB bank, or Hometax statement. See the data format guide for supported headers.");
   }
   return result;
 }

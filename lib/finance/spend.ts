@@ -7,11 +7,11 @@ export interface SpendCategory {
 }
 
 export const SPEND_CATEGORIES: SpendCategory[] = [];
-export const SPEND_CATEGORY_OPTIONS = [{ value: "", label: "미분류" }];
-export const spendCategoryLabel = (key: string): string => key.startsWith("custom:") ? key.slice(7) : "미분류";
+export const SPEND_CATEGORY_OPTIONS = [{ value: "", label: "Uncategorized" }];
+export const spendCategoryLabel = (key: string): string => key.startsWith("custom:") ? key.slice(7) : "Uncategorized";
 export const spendCategory = (key: string): SpendCategory | undefined => key.startsWith("custom:") ? { key, label: spendCategoryLabel(key), emoji: "●", hue: [...key].reduce((a,c) => a+c.charCodeAt(0),0)%300 } : undefined;
-export const catColor = (hue: number, l = 60) => `hsl(0 0% ${Math.max(20, Math.min(80, l - 25 + hue / 10))}%)`;
-export const catSoft = (_hue: number) => `hsl(0 0% 94%)`;
+export const catColor = (hue: number, l = 60) => `hsl(${hue} 60% ${Math.max(35, Math.min(65, l))}%)`;
+export const catSoft = (hue: number) => `hsl(${hue} 65% 94%)`;
 
 /** month(yyyy-mm) 기준 최근 n개월 목록 (과거→현재). */
 export function recentMonths(month: string, n: number): string[] {

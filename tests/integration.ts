@@ -29,7 +29,7 @@ try {
     await executeQuery(db as any, "owner-a", query("bank_transactions", "upsert", { rows: bank, options: { ignoreDuplicates: true } }));
     assert.equal((await readRows(db as any, "owner-a", "bank_transactions")).length, 1);
     assert.deepEqual(await readRows(db as any, "owner-b", "bank_transactions"), []);
-    await assert.rejects(executeQuery(db as any, "owner-b", query("bank_transactions", "update", { rows: { withdrawal: 1 }, filters: [["id", "eq", "bank-a"]] })), /접근 권한/);
+    await assert.rejects(executeQuery(db as any, "owner-b", query("bank_transactions", "update", { rows: { withdrawal: 1 }, filters: [["id", "eq", "bank-a"]] })), /not accessible/);
     assert.deepEqual(await executeQuery(db as any, "owner-a", query("bank_transactions", "upsert", { rows: { ...bank, id: "duplicate" }, options: { ignoreDuplicates: true } })), []);
     await assert.rejects(executeQuery(db as any, "owner-a", query("bank_transactions", "update", { rows: { withdrawal: "bad" }, filters: [["id", "eq", "bank-a"]] })));
     assert.equal((await readRows(db as any, "owner-a", "bank_transactions"))[0].withdrawal, 150);
@@ -84,21 +84,21 @@ try {
 
     const existingSplit = validateRecord("charge_splits", { id: "bank-split", bank_tx_id: "bank-a", label: "Existing split", amount: 150, spend_category: "custom:Equipment" });
     await putStatement(db as any, "owner-a", "charge_splits", existingSplit).run();
-    await assert.rejects(executeQuery(db as any, "owner-a", query("bank_transactions", "update", { rows: { withdrawal: 151 }, filters: [["id", "eq", "bank-a"]] })), /분할/);
-    await assert.rejects(executeQuery(db as any, "owner-a", query("bank_transactions", "upsert", { rows: { ...bank, withdrawal: 151 } })), /분할/);
+    await assert.rejects(executeQuery(db as any, "owner-a", query("bank_transactions", "update", { rows: { withdrawal: 151 }, filters: [["id", "eq", "bank-a"]] })), /splits/);
+    await assert.rejects(executeQuery(db as any, "owner-a", query("bank_transactions", "upsert", { rows: { ...bank, withdrawal: 151 } })), /splits/);
     assert.equal((await readRows(db as any, "owner-a", "bank_transactions")).find(row => row.id === "bank-a")!.withdrawal, 150);
     await executeQuery(db as any, "owner-a", query("bank_transactions", "update", { rows: { memo: "Independent metadata edit" }, filters: [["id", "eq", "bank-a"]] }));
     const splitCard = { id: "split-card", dedupe_key: "split-card", amount: 100, month: "2026-10", merchant: "Test-only split card" };
     await executeQuery(db as any, "owner-a", query("card_charges", "insert", { rows: splitCard }));
     await putStatement(db as any, "owner-a", "charge_splits", validateRecord("charge_splits", { id: "card-split", card_charge_id: "split-card", label: "Existing card split", amount: 100, spend_category: "custom:Equipment" })).run();
-    await assert.rejects(executeQuery(db as any, "owner-a", query("card_charges", "update", { rows: { amount: null }, filters: [["id", "eq", "split-card"]] })), /분할/);
-    await assert.rejects(executeQuery(db as any, "owner-a", query("card_charges", "upsert", { rows: { ...splitCard, amount: 90 } })), /분할/);
+    await assert.rejects(executeQuery(db as any, "owner-a", query("card_charges", "update", { rows: { amount: null }, filters: [["id", "eq", "split-card"]] })), /splits/);
+    await assert.rejects(executeQuery(db as any, "owner-a", query("card_charges", "upsert", { rows: { ...splitCard, amount: 90 } })), /splits/);
     assert.equal((await readRows(db as any, "owner-a", "card_charges")).find(row => row.id === "split-card")!.amount, 100);
     await db.prepare("DELETE FROM finance_records WHERE owner = ? AND kind = 'charge_splits' AND id = ?").bind("owner-a", "card-split").run();
     await executeQuery(db as any, "owner-a", query("card_charges", "update", { rows: { amount: 90 }, filters: [["id", "eq", "split-card"]] }));
     assert.equal((await readRows(db as any, "owner-a", "card_charges")).find(row => row.id === "split-card")!.amount, 90);
     await assert.rejects(executeQuery(db as any, "owner-b", query("charge_splits", "insert", { rows: { bank_tx_id: "bank-a", label: "split", amount: 150, spend_category: "custom:Equipment" } })));
-    assert.throws(() => validateRecord("tax_invoices", { id: "invoice", dedupe_key: "invoice", direction: "purchase", issue_date: "2026-10-10", supply_amount: 100, tax_amount: 10, total_amount: 999 }), /합계/);
+    assert.throws(() => validateRecord("tax_invoices", { id: "invoice", dedupe_key: "invoice", direction: "purchase", issue_date: "2026-10-10", supply_amount: 100, tax_amount: 10, total_amount: 999 }), /add up/);
     assert(matches({ purchase_date: null, approval_date: "2026-10-10" }, [["", "or", "and(purchase_date.gte.2026-10-01,purchase_date.lt.2026-11-01),and(purchase_date.is.null,approval_date.gte.2026-10-01,approval_date.lt.2026-11-01)"]]));
     const ruleOwner = "rule-owner";
     await executeQuery(db as any, ruleOwner, query("finance_categories", "insert", { rows: [{id:"cat-alpha",key:"custom:Alpha"},{id:"cat-beta",key:"custom:Beta"}] }));
@@ -111,8 +111,8 @@ try {
     const beforeRules={id:"before-rules",dedupe_key:"before-rules",month:"2026-10",amount:25,merchant:"Cloud service"};
     await executeQuery(db as any,ruleOwner,query("card_charges","insert",{rows:beforeRules}));
     await executeQuery(db as any,ruleOwner,query("spend_rules","insert",{rows:rules.map(r=>({id:r.id,pattern:r.pattern,category:r.category,match_mode:r.matchMode,priority:r.priority}))}));
-    await assert.rejects(executeQuery(db as any,"owner-b",query("spend_rules","insert",{rows:{pattern:"Cloud",category:"custom:Alpha"}})),/카테고리/);
-    await assert.rejects(executeQuery(db as any,ruleOwner,query("spend_rules","insert",{rows:{pattern:" CLOUD SERVICE ",category:"custom:Beta",match_mode:"exact"}})),/등록/);
+    await assert.rejects(executeQuery(db as any,"owner-b",query("spend_rules","insert",{rows:{pattern:"Cloud",category:"custom:Alpha"}})),/categories/);
+    await assert.rejects(executeQuery(db as any,ruleOwner,query("spend_rules","insert",{rows:{pattern:" CLOUD SERVICE ",category:"custom:Beta",match_mode:"exact"}})),/already exists/);
     await executeQuery(db as any,ruleOwner,query("card_charges","insert",{rows:[{...beforeRules,id:"imported",dedupe_key:"imported"},{...beforeRules,id:"manual",dedupe_key:"manual",spend_category:"custom:Beta"},{...beforeRules,id:"no-match",dedupe_key:"no-match",merchant:"Unmatched merchant"}]}));
     assert.equal((await readRows(db as any,ruleOwner,"card_charges")).find(r=>r.id==="imported")!.spend_category,"custom:Alpha");
     assert.equal((await readRows(db as any,ruleOwner,"card_charges")).find(r=>r.id==="no-match")!.spend_category,undefined);
@@ -132,7 +132,7 @@ try {
     assert.equal((await readRows(db as any,ruleOwner,"card_charges")).find(r=>r.id==="imported")!.spend_category,"custom:Renamed");
     assert.equal((await readRows(db as any,ruleOwner,"spend_rules")).find(r=>r.id==="a")!.category,"custom:Renamed");
     assert.equal((await readRows(db as any,ruleOwner,"finance_budgets"))[0].category,"custom:Renamed");
-    await assert.rejects(executeQuery(db as any,ruleOwner,query("finance_categories","delete",{filters:[["id","eq","cat-alpha"]]})),/사용 중/);
+    await assert.rejects(executeQuery(db as any,ruleOwner,query("finance_categories","delete",{filters:[["id","eq","cat-alpha"]]})),/in use/);
     await executeQuery(db as any,ruleOwner,query("finance_categories","insert",{rows:{id:"unused",key:"custom:Unused"}}));
     await executeQuery(db as any,ruleOwner,query("finance_categories","update",{rows:{key:"custom:Unused renamed"},filters:[["id","eq","unused"]]}));
     await executeQuery(db as any,ruleOwner,query("finance_categories","delete",{filters:[["id","eq","unused"]]}));

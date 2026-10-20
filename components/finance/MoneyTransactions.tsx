@@ -30,7 +30,7 @@ interface Props {
 
 const EMPTY_BANK: BankTx[] = [];
 const EMPTY_CARDS: CardCharge[] = [];
-const TYPES = ["전체 유형", "출금·사용", "입금·취소", "카드 사용", "카드 취소", "통장 출금", "통장 입금"];
+const TYPES = ["All types", "Outflows & spending", "Inflows & refunds", "Card spending", "Card cancellation", "Bank withdrawals", "Bank deposits"];
 
 export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, evVersion, onChanged, initialFilters = {} }: Props) {
   const [range, setRange] = useState<"month" | "all">(initialFilters.range ?? "month");
@@ -45,11 +45,11 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
   useEffect(() => {
     let alive = true;
     fetchMoneyCategories().then((keys) => { if (alive) setCustomCategories(keys); }).catch(() => {});
-    if (range === "all") fetchMoneyHistory().then((rows) => { if (alive) setHistory(rows); }).catch(() => { if (alive) setError("전체 기간 거래를 불러오지 못했습니다."); });
+    if (range === "all") fetchMoneyHistory().then((rows) => { if (alive) setHistory(rows); }).catch(() => { if (alive) setError("Could not load all-time transactions."); });
     return () => { alive = false; };
   }, [range, historyVersion]);
   const [q, setQ] = useState(initialFilters.query ?? "");
-  const [account, setAccount] = useState(initialFilters.account ?? "전체 계좌·카드");
+  const [account, setAccount] = useState(initialFilters.account ?? "All accounts & cards");
   const [category, setCategory] = useState(initialFilters.category ?? "");
   const [type, setType] = useState(initialFilters.type ?? TYPES[0]);
   const [sort, setSort] = useState<"recent" | "amount" | "oldest">("recent");
@@ -67,7 +67,7 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
 
   const rows = useMemo(() => moneyTransactionRows(cards, bank), [cards, bank]);
 
-  const accounts = useMemo(() => [...new Set(["전체 계좌·카드", "국내 카드", "해외 카드", ...rows.map((r) => r.account)])], [rows]);
+  const accounts = useMemo(() => [...new Set(["All accounts & cards", "Domestic cards", "International cards", ...rows.map((r) => r.account)])], [rows]);
 
   /* 거래별 증빙 개수 — 세금계산서도 영수증과 같은 증빙으로 들어온다.
      줄마다 보여줘야 "이건 증빙 붙었나?"를 열어보지 않고 안다. */
@@ -111,7 +111,8 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
         });
         const json = (await res.json() as any);
         if (!res.ok) throw new Error(json.detail || json.error?.message || json.error || `HTTP ${res.status}`);
-        if (!window.confirm(`AI가 ${[...(json.cards ?? []), ...(json.bank ?? [])].filter((r: any) => r.category).length}건의 분류를 제안했습니다. ${[...(json.cards ?? []), ...(json.bank ?? [])].filter((r: any) => r.category).map((r: any) => `${cardsSnap.find(c=>c.id===r.id)?.merchant || bankSnap.find(b=>b.id===r.id)?.counterparty || r.id}: ${spendCategoryLabel(r.category)}`).join("\n")}\n적용할까요?`)) continue;
+        if (!window.confirm(`AI suggested categories for ${[...(json.cards ?? []), ...(json.bank ?? [])].filter((r: any) => r.category).length} transactions. ${[...(json.cards ?? []), ...(json.bank ?? [])].filter((r: any) => r.category).map((r: any) => `${cardsSnap.find(c=>c.id===r.id)?.merchant || bankSnap.find(b=>b.id===r.id)?.counterparty || r.id}: ${spendCategoryLabel(r.category)}`).join("\n")}
+Apply these suggestions?`)) continue;
         for (const c of json.cards ?? []) {
           if (customCategories.includes(c.category)) { await updateCardCharge(c.id, { spend_category: c.category }); h.progress(++applied, total); }
         }
@@ -120,12 +121,12 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
         }
       }
       refresh();
-      return `${applied}건 분류 완료`;
+      return `${applied} transactions categorized`;
     });
   }
 
   function exportCsv() {
-    const head = "날짜,거래명,계좌·카드,분류,유형,금액,메모";
+    const head = "Date,Transaction,Account or card,Category,Type,Amount,Note";
     const q2 = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const body = shown.map((r) => [r.date, q2(r.name), q2(r.account), q2(spendCategoryLabel(r.category)), r.type, r.amount ?? "", q2(r.note)].join(","));
     const blob = new Blob(["﻿" + [head, ...body].join("\n")], { type: "text/csv;charset=utf-8" });
@@ -140,65 +141,65 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
     <>
       <section className="money-card">
         {error && <p role="alert" className="money-negative">{error}</p>}
-        {range === "all" && history === null && <p className="money-note">전체 기간 거래를 불러오는 중입니다.</p>}
+        {range === "all" && history === null && <p className="money-note">Loading all-time transactions…</p>}
         <div className="money-card-header">
-          <h2>거래 내역 {shown.length}건</h2>
+          <h2>Transactions {shown.length} records</h2>
           <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {job.running
-              ? <span className="money-sub">AI 분류 중 {job.done}/{job.total}</span>
+              ? <span className="money-sub">AI categorization {job.done}/{job.total}</span>
               : job.message && <span className="money-sub">{job.message}</span>}
-            <button type="button" className="money-primary" disabled={job.running || pending === 0 || customCategories.length === 0} onClick={() => { if (window.confirm("본인 카테고리를 사용해 미분류 거래의 AI 제안을 요청하고 적용합니다. 외부 API 비용이 발생할 수 있습니다. 진행할까요?")) aiCategorize(); }}>
-              AI 분류 제안{pending ? ` (${pending})` : ""}
+            <button type="button" className="money-primary" disabled={job.running || pending === 0 || customCategories.length === 0} onClick={() => { if (window.confirm("Request AI suggestions for uncategorized transactions using your categories? You can review before applying. External API charges may apply.")) aiCategorize(); }}>
+              Suggest categories with AI{pending ? ` (${pending})` : ""}
             </button>
-            <button type="button" className="money-text-button" onClick={exportCsv}>CSV 내보내기</button>
+            <button type="button" className="money-text-button" onClick={exportCsv}>Export CSV</button>
           </span>
         </div>
 
-        {category === "uncategorized" && <div className="money-review-banner"><span>미분류 거래를 정리하세요. 같은 거래명도 함께 분류할 수 있습니다.</span><button type="button" onClick={() => setCategory("")}>모든 거래 보기</button></div>}
+        {category === "uncategorized" && <div className="money-review-banner"><span>Review uncategorized transactions. You can categorize matching names together.</span><button type="button" onClick={() => setCategory("")}>View all transactions</button></div>}
         <div className="money-toolbar">
-          <select aria-label="기간 필터" value={range} onChange={(e) => { setRange(e.target.value as "month" | "all"); setPage(0); }}><option value="month">선택한 달</option><option value="all">전체 기간</option></select>
-          <select value={sort} onChange={(e) => { setSort(e.target.value as "recent" | "amount" | "oldest"); setPage(0); }} aria-label="정렬">
-            <option value="recent">최신 거래순</option>
-            <option value="amount">큰 금액순</option><option value="oldest">오래된 거래순</option>
+          <select aria-label="Date range" value={range} onChange={(e) => { setRange(e.target.value as "month" | "all"); setPage(0); }}><option value="month">Selected month</option><option value="all">All time</option></select>
+          <select value={sort} onChange={(e) => { setSort(e.target.value as "recent" | "amount" | "oldest"); setPage(0); }} aria-label="Sort">
+            <option value="recent">Newest first</option>
+            <option value="amount">Largest amount first</option><option value="oldest">Oldest first</option>
           </select>
-          <input placeholder="가맹점, 거래명, 분류 검색" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} aria-label="거래 검색" />
-          <select value={account} onChange={(e) => { setAccount(e.target.value); setPage(0); }} aria-label="계좌·카드">
+          <input placeholder="Search merchants, transactions, categories" value={q} onChange={(e) => { setQ(e.target.value); setPage(0); }} aria-label="Search transactions" />
+          <select value={account} onChange={(e) => { setAccount(e.target.value); setPage(0); }} aria-label="Accounts & cards">
             {accounts.map((a) => <option key={a}>{a}</option>)}
           </select>
-          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(0); }} aria-label="분류">
-            <option value="">모든 분류</option><option value="uncategorized">미분류</option>
+          <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(0); }} aria-label="Category">
+            <option value="">All categories</option><option value="uncategorized">Uncategorized</option>
             {categoryOptions.filter((o) => o.value).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
-          <select value={type} onChange={(e) => { setType(e.target.value); setPage(0); }} aria-label="유형">
+          <select value={type} onChange={(e) => { setType(e.target.value); setPage(0); }} aria-label="Type">
             {TYPES.map((t) => <option key={t}>{t}</option>)}
           </select>
         </div>
 
-        {shown.length === 0 ? <p className="money-empty">조건에 맞는 거래가 없습니다.</p> : (
+        {shown.length === 0 ? <p className="money-empty">No transactions match your filters.</p> : (
           <div className="money-table-wrap">
             <table>
               <thead>
-                <tr><th>날짜</th><th>거래명</th><th>계좌·카드</th><th>분류</th><th>유형</th><th className="money-right">금액</th></tr>
+                <tr><th>Date</th><th>Transaction name</th><th>Accounts &amp; cards</th><th>Category</th><th>Type</th><th className="money-right">Amount</th></tr>
               </thead>
               <tbody>
                 {shown.slice(currentPage * 25, currentPage * 25 + 25).map((r) => (
-                  <tr key={r.key} tabIndex={0} role="button" aria-label={`${r.name} 거래 상세`} onClick={() => setDetail(r)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetail(r); } }}>
+                  <tr key={r.key} tabIndex={0} role="button" aria-label={`${r.name} Transaction details`} onClick={() => setDetail(r)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setDetail(r); } }}>
                     <td className="money-muted">{r.date.replaceAll("-", ".")}</td>
                     <td>
                       {r.name}
                       {evCount.get(r.key) ? (
-                        <span title={`증빙 ${evCount.get(r.key)}건`} style={{ marginLeft: 6, fontSize: 11, color: "#404040" }}>
+                        <span title={`Receipts ${evCount.get(r.key)} records`} style={{ marginLeft: 6, fontSize: 11, color: "#404040" }}>
                           📎{evCount.get(r.key)! > 1 ? evCount.get(r.key) : ""}
                         </span>
                       ) : null}
                     </td>
                     <td className="money-muted">{r.account}</td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <button type="button" aria-label={`${r.name} 카테고리 변경`} onKeyDown={(e) => e.stopPropagation()} onClick={() => setCategorySubject(r)}>{spendCategoryLabel(r.category)} ⌄</button>
+                      <button type="button" aria-label={`${r.name} Change category`} onKeyDown={(e) => e.stopPropagation()} onClick={() => setCategorySubject(r)}>{spendCategoryLabel(r.category)} ⌄</button>
                     </td>
                     <td className="money-muted">{r.type}</td>
                     <td className={`money-right${(r.amount ?? 0) < 0 ? " money-negative" : ""}`} style={{ fontWeight: 650 }}>
-                      {r.amount == null ? "원화 미확정" : `${r.amount > 0 ? "+" : "−"}${wonFmt(Math.abs(r.amount))}`}
+                      {r.amount == null ? "KRW amount pending" : `${r.amount > 0 ? "+" : "−"}${wonFmt(Math.abs(r.amount))}`}
                     </td>
                   </tr>
                 ))}
@@ -206,7 +207,7 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
             </table>
           </div>
         )}
-        <div className="money-card-header" style={{ marginTop: 16 }}><span className="money-sub">{shown.length ? `${currentPage * 25 + 1}–${Math.min((currentPage + 1) * 25, shown.length)} / ${shown.length}건` : "0건"}</span><span><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>이전</button> <button type="button" disabled={(currentPage + 1) * 25 >= shown.length} onClick={() => setPage(currentPage + 1)}>다음</button></span></div>
+        <div className="money-card-header" style={{ marginTop: 16 }}><span className="money-sub">{shown.length ? `${currentPage * 25 + 1}–${Math.min((currentPage + 1) * 25, shown.length)} / ${shown.length} records` : "0 records"}</span><span><button type="button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button> <button type="button" disabled={(currentPage + 1) * 25 >= shown.length} onClick={() => setPage(currentPage + 1)}>Next</button></span></div>
       </section>
 
       {categorySubject && <MoneyCategoryPicker subject={categorySubject} onClose={() => setCategorySubject(null)} onSaved={() => { refresh(); setDetail(null); }} />}

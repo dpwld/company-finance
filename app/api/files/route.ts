@@ -11,13 +11,13 @@ async function handle(request: Request) {
             BUCKET: R2Bucket;
         }).BUCKET;
         if (!store)
-            return Response.json({ error: { message: "R2 BUCKET 연결이 필요합니다. 파일 저장소를 설정하세요." } }, { status: 503 });
+            return Response.json({ error: { message: "Configure an R2 BUCKET binding to store files." } }, { status: 503 });
         if (request.method === "PUT") {
             const body = await request.arrayBuffer();
             if (!body.byteLength || body.byteLength > 20 * 1024 * 1024)
-                throw new Error("파일은 1바이트~20MB로 올려주세요.");
+                throw new Error("Upload a file between 1 byte and 20 MB.");
             if (await store.head(key))
-                throw new Error("같은 경로의 파일이 이미 있습니다.");
+                throw new Error("A file already exists at this path.");
             await store.put(key, body, { httpMetadata: { contentType: request.headers.get("content-type") || "application/octet-stream" } });
             return Response.json({ path });
         }
@@ -27,7 +27,7 @@ async function handle(request: Request) {
         }
         const file = await store.get(key);
         if (!file)
-            return new Response("파일 없음", { status: 404 });
+            return new Response("File not found", { status: 404 });
         return new Response(file.body, { headers: { "Content-Type": file.httpMetadata?.contentType || "application/octet-stream", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment" } });
     }
     catch (error) {

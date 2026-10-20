@@ -182,7 +182,7 @@ export async function saveChargeSplits(
 ): Promise<void> {
   const t: SplitTarget = typeof target === "string" ? { cardChargeId: target } : target;
   const response = await fetch("/api/splits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target: t, lines }) });
-  if (!response.ok) throw new Error(((await response.json() as any)).error?.message || "분할 저장 실패");
+  if (!response.ok) throw new Error(((await response.json() as any)).error?.message || "Could not save splits");
 }
 
 export async function updateChargeSplit(
@@ -359,7 +359,7 @@ export async function fetchMoneyCategories(): Promise<string[]> {
 
 export async function createMoneyCategory(label: string): Promise<string> {
   const name = label.trim();
-  if (!name || name.length > 40) throw new Error("카테고리 이름은 1~40자로 입력하세요.");
+  if (!name || name.length > 40) throw new Error("Category names must be between 1 and 40 characters.");
   const key = `custom:${name}`;
   const { error } = await createClient().from("finance_categories").upsert({ key }, { ignoreDuplicates: true });
   if (error) throw error;
@@ -393,5 +393,5 @@ export async function deleteMoneyCategory(key: string): Promise<void> {
 export interface RulePreview { kind: "card" | "bank"; id: string; name: string; category: string; ruleId: string }
 export async function previewSpendRules(apply = false): Promise<{ matches: RulePreview[]; applied: number }> {
  const response = await fetch("/api/rules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apply }) });
- const value = await response.json() as { matches: RulePreview[]; applied: number; error?: string }; if(!response.ok) throw new Error(value.error || "규칙 적용 실패"); return value;
+ const value = await response.json() as { matches: RulePreview[]; applied: number; error?: string }; if(!response.ok) throw new Error(value.error || "Could not apply rules"); return value;
 }

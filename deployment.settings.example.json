@@ -1,0 +1,11 @@
+{
+  "authMode": "cloudflare-access",
+  "name": "my-workspace",
+  "accountId": "YOUR_CLOUDFLARE_ACCOUNT_ID",
+  "databaseId": "YOUR_D1_DATABASE_ID",
+  "databaseName": "my-workspace-db",
+  "bucketName": "my-workspace-files",
+  "hostname": "workspace.example.com",
+  "teamDomain": "https://YOUR-TEAM.cloudflareaccess.com",
+  "audience": "YOUR_ACCESS_APPLICATION_AUD_TAG"
+}

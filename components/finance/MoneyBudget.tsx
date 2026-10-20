@@ -40,7 +40,7 @@ function Ring({ ratio, label, sub }: { ratio: number; label: string; sub: string
 export function parseBudgetAmount(raw: string): number {
   const value = raw.trim();
   const amount = value ? Number(value) : 0;
-  if ((value && !/^\d+$/.test(value)) || !Number.isSafeInteger(amount) || amount < 0) throw new Error("예산은 0 이상의 정수 금액으로 입력하세요.");
+  if ((value && !/^\d+$/.test(value)) || !Number.isSafeInteger(amount) || amount < 0) throw new Error("Enter a whole-number budget of zero or more.");
   return amount;
 }
 
@@ -56,7 +56,7 @@ export function MoneyBudget({ month, bank, cards, splits }: Props) {
   useEffect(() => {
     let alive = true;
     fetchMoneyCategories().then((keys) => { if (alive) setCustomCategories(keys); }).catch(() => {});
-    fetchBudgets().then((b) => { if (alive) { setBudget(b); setLoaded(true); } }).catch(() => { if (alive) setError("저장된 예산을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요."); });
+    fetchBudgets().then((b) => { if (alive) { setBudget(b); setLoaded(true); } }).catch(() => { if (alive) setError("Could not load budgets. Refresh and try again."); });
     return () => { alive = false; };
   }, []);
 
@@ -92,7 +92,7 @@ export function MoneyBudget({ month, bank, cards, splits }: Props) {
       }
       setSaved(true);
     } catch {
-      setError("저장하지 못한 예산이 있습니다. 완료된 항목은 유지되며 남은 입력을 다시 저장할 수 있습니다.");
+      setError("Some budgets could not be saved. Saved items are preserved; retry the remaining changes.");
     } finally { setSaving(false); }
   }
 
@@ -100,16 +100,16 @@ export function MoneyBudget({ month, bank, cards, splits }: Props) {
     <div className="money-grid">
       <section className="money-card">
         <div className="money-card-header">
-          <h2>월 지출 예산</h2>
-          <span className="money-tag">{Number(month.slice(5, 7))}월 · 카드 순사용액</span>
+          <h2>Monthly spending budget</h2>
+          <span className="money-tag">{Number(month.slice(5, 7))} · Net card spending</span>
         </div>
-        {totals.unknownAmountCount > 0 && <p className="money-note money-negative">원화 미확정 {totals.unknownAmountCount}건은 사용액에 포함되지 않았습니다.</p>}
+        {totals.unknownAmountCount > 0 && <p className="money-note money-negative">KRW amount pending {totals.unknownAmountCount} records excluded from spending totals.</p>}
         {error && <p role="alert" className="money-note money-negative">{error}</p>}
-        {rows.length === 0 ? <p className="money-empty">분류 규칙에서 카테고리를 먼저 만들면 예산을 설정할 수 있습니다.</p> : (
+        {rows.length === 0 ? <p className="money-empty">Create categories in Category rules before setting budgets.</p> : (
           <div className="money-table-wrap">
             <table>
               <thead>
-                <tr><th>카테고리</th><th>예산</th><th className="money-right">사용액</th><th className="money-right">남은 예산</th></tr>
+                <tr><th>Category</th><th>Budget</th><th className="money-right">Spent</th><th className="money-right">Remaining budget</th></tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
@@ -120,11 +120,11 @@ export function MoneyBudget({ month, bank, cards, splits }: Props) {
                         className="money-budget-input"
                         type="number" min="0" step="10000"
                         inputMode="numeric"
-                        placeholder="설정하기"
+                        placeholder="Set budget"
                         disabled={saving || !loaded}
                         value={draft[r.key] ?? (r.plan ? String(r.plan) : "")}
                         onChange={(e) => { setDraft((d) => ({ ...d, [r.key]: e.target.value })); setSaved(false); }}
-                        aria-label={`${r.label} 예산`}
+                        aria-label={`${r.label} Budget`}
                       />
                     </td>
                     <td className="money-right">{wonFmt(r.used)}</td>
@@ -137,28 +137,28 @@ export function MoneyBudget({ month, bank, cards, splits }: Props) {
             </table>
           </div>
         )}
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}><button type="button" className="money-primary" disabled={saving || !loaded} onClick={() => void commit()}>{saving ? "저장 중…" : "예산 저장"}</button></div>
-        {saved && <p role="status" className="money-trend">예산을 저장했습니다.</p>}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}><button type="button" className="money-primary" disabled={saving || !loaded} onClick={() => void commit()}>{saving ? "Saving…" : "Save budgets"}</button></div>
+        {saved && <p role="status" className="money-trend">Budgets saved.</p>}
         <p className="money-note">
-          예산 저장을 누르면 계정에 저장됩니다. 예산은 매달 같은 기준으로 쓰이고, 비우면 설정이 지워집니다.
+          Save budgets to your account. The same limits apply each month. Clear a value to remove its budget.
         </p>
       </section>
 
       <section className="money-card">
         <p className="money-label">LEFT TO SPEND</p>
-        <div className="money-card-header"><h2>남은 예산</h2></div>
+        <div className="money-card-header"><h2>Remaining budget</h2></div>
         {planTotal === 0 ? (
-          <Ring ratio={0} label="—" sub="예산을 설정하세요" />
+          <Ring ratio={0} label="—" sub="Set a budget" />
         ) : (
           <Ring
             ratio={usedTotal / planTotal}
             label={wonFmt(planTotal - usedTotal)}
-            sub={planTotal - usedTotal >= 0 ? "남음" : "초과"}
+            sub={planTotal - usedTotal >= 0 ? "remaining" : "over budget"}
           />
         )}
-        <div className="money-summary-row"><span className="money-muted">설정한 예산</span><span style={{ fontWeight: 650 }}>{wonFmt(planTotal)}</span></div>
-        <div className="money-summary-row"><span className="money-muted">이 달 지출</span><span style={{ fontWeight: 650 }}>{wonFmt(usedTotal)}</span></div>
-        <p className="money-note">카드 순사용액을 반영합니다. 미분류도 포함하며 통장 출금은 별도 집계합니다.</p>
+        <div className="money-summary-row"><span className="money-muted">Budgeted</span><span style={{ fontWeight: 650 }}>{wonFmt(planTotal)}</span></div>
+        <div className="money-summary-row"><span className="money-muted">Spent this month</span><span style={{ fontWeight: 650 }}>{wonFmt(usedTotal)}</span></div>
+        <p className="money-note">Based on net card spending, including uncategorized records. Bank withdrawals are counted separately.</p>
       </section>
     </div>
   );

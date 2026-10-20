@@ -3,10 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Company Finance",
-  description: "Company Finance · 거래 · 분류 · 예산 · 증빙 워크스페이스",
-  other: {
-    "codex-preview": "development",
-  },
+  description: "Company Finance · Transactions, categories, budgets, and receipts",
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",
@@ -19,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <body className="antialiased">{children}</body>
     </html>
   );

@@ -53,3 +53,11 @@ Cleanup was executed after the parent finished both screenshots. All nine local 
 ## Product naming update
 
 The user-facing product is Company Finance. Browser metadata, sidebar brand, help/error copy, README title/introduction/image descriptions and npm package/lockfile root names use Company Finance/company-finance. Internal Finance component, API, schema, folder and demo identifiers remain unchanged. Typecheck, production build and local authenticated SSR/title verification passed after this rename. The bounded fictional fixture was recreated locally on port 5182 for branded screenshot recapture and remains in place until the parent finishes; the active manifest again lists its exact IDs.
+
+## English interface and independent installation — 2026-10-20
+
+- Sky-blue theme and English UI/error text across all six retained views. User categories, imported values and Korean bank/card/tax header contracts stay unchanged.
+- Domain tests, typecheck, HTTP/D1/R2 integration and a separate Korean XLSX/cancellation/FX review passed. Browser checks covered all six views and the category-rule dialog.
+- README screenshots use only the explicit local fictional fixture, removed after capture. Hosted workspaces were not seeded.
+- A separate source snapshot passed npm ci, npm run setup, authenticated SSR, initially empty storage, insert/read/update/rejected-update preservation and cleanup.
+- Own-account Cloudflare Access token tests and Wrangler dry-run packaging passed; live external identity-provider and paid provider actions remain unverified.

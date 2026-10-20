@@ -2,7 +2,7 @@ import { matchSpendRule, ruleFromRow, recordRuleTexts } from "@/lib/finance/rule
 import { z } from "zod";
 import type { Query, Row } from "../transport";
 const s = z.string().max(10000), id = z.string().min(1).max(200), amount = z.number().finite().safe();
-const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v, "유효한 날짜가 필요합니다.");
+const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v, "A valid date is required.");
 const month = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const nullableAmount = amount.nullable().optional();
 const common = { id: id.optional(), created_at: s.optional(), updated_at: s.optional() };
@@ -22,12 +22,12 @@ export const tableNames = Object.keys(schemas);
 export function validateRecord(table: string, row: Row): Row {
     const schema = schemas[table as keyof typeof schemas];
     if (!schema)
-        throw new Error("지원하지 않는 테이블입니다.");
+        throw new Error("This table is not supported.");
     const value: Row = schema.strict().parse(row);
     if (table === "tax_invoices" && Math.abs(value.supply_amount + value.tax_amount - value.total_amount) > 1)
-        throw new Error("공급가액과 세액의 합계가 총액과 다릅니다.");
+        throw new Error("The subtotal and tax must add up to the total.");
     if (["charge_splits", "evidence_links"].includes(table) && Number(Boolean(value.card_charge_id)) + Number(Boolean(value.bank_tx_id)) !== 1)
-        throw new Error("카드 또는 은행 거래 하나를 선택하세요.");
+        throw new Error("Select one card or bank transaction.");
     return value;
 }
 export function uniqueKey(table: string, row: Row): string {
@@ -58,7 +58,7 @@ function expression(row: Row, text: string): boolean {
         return splitParts(text.slice(4, -1)).every(part => expression(row, part));
     const match = text.match(/^(\w+)\.(gte|lt|eq|is|in)\.(.*)$/);
     if (!match)
-        throw new Error("잘못된 조회 조건입니다.");
+        throw new Error("Invalid query filters.");
     const [, key, op, raw] = match;
     return compare(row[key], op, op === "in" ? raw.replace(/^\(|\)$/g, "").split(",") : raw === "null" ? null : raw);
 }
@@ -70,7 +70,7 @@ function compare(value: any, op: string, expected: any): boolean {
         case "gte": return value != null && value >= expected;
         case "lt": return value != null && value < expected;
         case "in": return Array.isArray(expected) && expected.includes(value);
-        default: throw new Error("지원하지 않는 조회 조건입니다.");
+        default: throw new Error("These query filters are not supported.");
     }
 }
 export function matches(row: Row, filters: Query["filters"]): boolean { return filters.every(([key, op, value]) => op === "or" ? splitParts(String(value)).some(part => expression(row, part)) : compare(row[key], op, value)); }
@@ -107,7 +107,7 @@ function clearReciprocal(db: D1Database, owner: string, table: string, field: st
 async function validateRelations(db: D1Database, owner: string, table: string, row: Row, patch: Row) {
     const category = ["spend_rules", "finance_budgets"].includes(table) ? row.category : row.spend_category;
     if (category && category !== "uncategorized" && (Object.hasOwn(patch, "category") || Object.hasOwn(patch, "spend_category"))) {
-        if (!(await readRows(db, owner, "finance_categories")).some(c => c.key === category)) throw new Error("먼저 본인의 카테고리를 만드세요.");
+        if (!(await readRows(db, owner, "finance_categories")).some(c => c.key === category)) throw new Error("Create your categories first.");
     }
     const amountChanged = table === "card_charges" ? Object.hasOwn(patch, "amount") : table === "bank_transactions" && (Object.hasOwn(patch, "withdrawal") || Object.hasOwn(patch, "deposit"));
     if (amountChanged) {
@@ -115,7 +115,7 @@ async function validateRelations(db: D1Database, owner: string, table: string, r
         const splits = (await readRows(db, owner, "charge_splits")).filter(split => split[key] === row.id);
         const total = table === "card_charges" ? row.amount : row.withdrawal || row.deposit;
         if (splits.length && (!Number.isFinite(total) || Math.abs(splits.reduce((sum, split) => sum + split.amount, 0) - total) > 0.01))
-            throw new Error("기존 분할 합계와 거래 금액이 달라집니다. 분할을 먼저 해제한 뒤 금액을 수정하고 다시 분할하세요.");
+            throw new Error("The amount would no longer match existing splits. Remove the splits before changing the amount, then create new splits.");
     }
     for (const [key, target] of [["card_charge_id", "card_charges"], ["bank_tx_id", "bank_transactions"], ["evidence_id", "finance_evidence"], ["matched_tx", "bank_transactions"], ["matched_invoice", "tax_invoices"]]) {
         if (!row[key])
@@ -124,7 +124,7 @@ async function validateRelations(db: D1Database, owner: string, table: string, r
             payload: string;
         }>();
         if (!exists)
-            throw new Error("연결 대상이 없거나 접근 권한이 없습니다.");
+            throw new Error("The linked record is unavailable or not accessible.");
     }
 }
 export async function executeQuery(db: D1Database, owner: string, input: unknown): Promise<unknown> {
@@ -133,22 +133,22 @@ export async function executeQuery(db: D1Database, owner: string, input: unknown
             ...string[]
         ]), action: z.enum(["select", "insert", "update", "upsert", "delete"]), rows: z.union([z.record(z.unknown()), z.array(z.record(z.unknown())).max(2000)]).optional(), filters: z.array(z.tuple([z.string(), z.string(), z.unknown()])).max(30), orders: z.array(z.tuple([z.string(), z.boolean()])).max(10), select: z.string().max(500), single: z.boolean().optional(), maybeSingle: z.boolean().optional(), from: z.number().int().nonnegative().optional(), to: z.number().int().nonnegative().optional(), limit: z.number().int().positive().max(10000).optional(), options: z.record(z.unknown()).optional() }).strict().parse(input) as Query;
     if (q.table === "ai_jobs")
-        throw new Error("이 데이터는 전용 API로만 접근할 수 있습니다.");
-    if (q.table === "charge_splits" && !["select", "update"].includes(q.action)) throw new Error("거래 분할은 전용 저장 API를 사용하세요.");
-    if (q.table === "charge_splits" && q.action === "update" && Object.keys(q.rows || {}).some(key => !["spend_category", "debit_account", "credit_account", "status", "remarks"].includes(key))) throw new Error("분할 금액과 대상은 전용 저장 API로 변경하세요.");
+        throw new Error("Use the dedicated API to access this data.");
+    if (q.table === "charge_splits" && !["select", "update"].includes(q.action)) throw new Error("Use the dedicated split API to save transaction splits.");
+    if (q.table === "charge_splits" && q.action === "update" && Object.keys(q.rows || {}).some(key => !["spend_category", "debit_account", "credit_account", "status", "remarks"].includes(key))) throw new Error("Use the dedicated split API to change amounts and targets.");
     let rows = await readRows(db, owner, q.table);
     let selected = rows.filter(row => matches(row, q.filters));
     if (q.action !== "select") {
         if (q.action === "update" && !selected.length)
-            throw new Error("대상 레코드가 없거나 접근 권한이 없습니다.");
+            throw new Error("The record is unavailable or not accessible.");
         const statements: D1PreparedStatement[] = [], changed: Row[] = [];
         if (["update", "delete"].includes(q.action) && !q.filters.length)
-            throw new Error("수정/삭제 대상을 지정하세요.");
+            throw new Error("Specify the record to update or delete.");
         if (q.action === "delete") {
             for (const row of selected) {
                 if (q.table === "finance_categories") {
                     for (const [kind, field] of [["card_charges","spend_category"], ["bank_transactions","spend_category"], ["charge_splits","spend_category"], ["spend_rules","category"], ["finance_budgets","category"]]) {
-                        if ((await readRows(db, owner, kind)).some(r => r[field] === row.key)) throw new Error("사용 중인 카테고리입니다. 거래 분류·규칙·예산을 먼저 해제하세요.");
+                        if ((await readRows(db, owner, kind)).some(r => r[field] === row.key)) throw new Error("This category is in use. Remove its transaction, rule, and budget links first.");
                     }
                 }
                 if (q.table === "bank_transactions") statements.push(clearReciprocal(db, owner, "tax_invoices", "matched_tx", row.id));
@@ -167,11 +167,11 @@ export async function executeQuery(db: D1Database, owner: string, input: unknown
                 let row = validateRecord(q.table, { ...before, ...input, id: before?.id || input.id || crypto.randomUUID(), created_at: before?.created_at || input.created_at || new Date().toISOString() });
                 let existing = before;
                 const same = rows.find(old => uniqueKey(q.table, old) === uniqueKey(q.table, row));
-                if (before && same && before.id !== same.id) throw new Error("이미 등록된 식별 키입니다.");
+                if (before && same && before.id !== same.id) throw new Error("This identifier already exists.");
                 if (same && q.action !== "update") {
                     if (q.action === "insert") {
                         if (q.table === "evidence_links") continue;
-                        throw new Error("이미 등록된 레코드입니다.");
+                        throw new Error("This record already exists.");
                     }
                     if (q.options?.ignoreDuplicates) continue;
                     existing = same;
@@ -211,6 +211,6 @@ export async function executeQuery(db: D1Database, owner: string, input: unknown
         selected = selected.slice(q.from ?? 0, q.to == null ? q.limit == null ? undefined : (q.from ?? 0) + q.limit : q.to + 1);
     }
     if (q.single && selected.length !== 1)
-        throw new Error("레코드를 찾을 수 없습니다.");
+        throw new Error("Record not found.");
     return q.single || q.maybeSingle ? selected[0] ?? null : selected;
 }
