@@ -1,4 +1,4 @@
-# Ledgernote implementation report
+# Company Finance implementation report
 
 ## Final authorized scope
 
@@ -52,4 +52,4 @@ Cleanup was executed after the parent finished both screenshots. All nine local 
 
 ## Product naming update
 
-The user-facing product is Ledgernote. Browser metadata, sidebar brand, help/error copy, README title/introduction/image descriptions and npm package/lockfile root names use Ledgernote/ledgernote. Internal Finance component, API, schema, folder and demo identifiers remain unchanged. Typecheck, production build and local authenticated SSR/title verification passed after this rename. The bounded fictional fixture was recreated locally on port 5182 for branded screenshot recapture and remains in place until the parent finishes; the active manifest again lists its exact IDs.
+The user-facing product is Company Finance. Browser metadata, sidebar brand, help/error copy, README title/introduction/image descriptions and npm package/lockfile root names use Company Finance/company-finance. Internal Finance component, API, schema, folder and demo identifiers remain unchanged. Typecheck, production build and local authenticated SSR/title verification passed after this rename. The bounded fictional fixture was recreated locally on port 5182 for branded screenshot recapture and remains in place until the parent finishes; the active manifest again lists its exact IDs.

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Ledgernote",
-  description: "Ledgernote · 거래 · 분류 · 예산 · 증빙 워크스페이스",
+  title: "Company Finance",
+  description: "Company Finance · 거래 · 분류 · 예산 · 증빙 워크스페이스",
   other: {
     "codex-preview": "development",
   },

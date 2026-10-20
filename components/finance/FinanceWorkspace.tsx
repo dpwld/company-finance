@@ -123,7 +123,7 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
       const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
       const link = document.createElement("a"); link.href = url; link.download = `finance-money-backup-${new Date().toISOString().slice(0, 10)}.json`; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch { setExportError("백업을 만들지 못했습니다. 연결과 Ledgernote 조회 권한을 확인해 주세요."); }
+    } catch { setExportError("백업을 만들지 못했습니다. 연결과 Company Finance 조회 권한을 확인해 주세요."); }
     finally { setExporting(false); }
   }
 
@@ -203,7 +203,7 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
               />
               <button type="button" onClick={() => { setData(null); setLoadError(false); reload(month); setEvVersion((v) => v + 1); }}>새로고침</button>
               <button type="button" onClick={() => setRulesOpen(true)}>분류 규칙</button>
-              <button type="button" onClick={() => setHelpOpen(true)} aria-label="Ledgernote 사용 안내">자료 정보</button>
+              <button type="button" onClick={() => setHelpOpen(true)} aria-label="Company Finance 사용 안내">자료 정보</button>
             </>
           }
         >
@@ -231,7 +231,7 @@ export function FinanceWorkspace({ initialTab = "home" }: { initialTab?: string 
       <Modal
         open={helpOpen}
         onClose={() => setHelpOpen(false)}
-        title="Ledgernote 사용 안내"
+        title="Company Finance 사용 안내"
         size="lg"
         footer={
           <div style={{ display: "flex", justifyContent: "flex-end" }}>

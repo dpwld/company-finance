@@ -1,4 +1,4 @@
-# Ledgernote final feature scope
+# Company Finance final feature scope
 
 The latest user scope supersedes the earlier research-finance inventory. The six original core screens retain their layout and underlying ledger behavior. New workspaces have no categories, rules, budgets or transactions.
 
