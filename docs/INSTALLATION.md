@@ -1,6 +1,6 @@
 # Install and configure
 
-These are web services you can run from source. You do not need the author's GitHub account, ChatGPT account, API keys, database, or company data to develop locally. The repositories currently require access because they are private.
+These are web services you can run from source. You do not need the author's GitHub account, ChatGPT account, API keys, database, or company data to develop locally.
 
 ## Local quickstart
 

@@ -12,7 +12,7 @@ English · [한국어](README.ko.md)
 
 ## Quickstart
 
-Prerequisites: **Git, Node.js 22.13+ and npm**. Repository access is currently required because the project is private.
+Prerequisites: **Git, Node.js 22.13+ and npm**.
 
 ```sh
 git clone https://github.com/dpwld/company-finance.git
@@ -101,4 +101,4 @@ node scripts/test-http.mjs
 
 React/Vinext UI → authenticated APIs → owner-scoped D1 records. R2 files are owner-checked. Tests cover actual temporary D1 persistence, rule precedence/preview/apply, duplicate imports, invalid-input preservation, atomic field updates, splits, invoice integrity, balances and original statement parsers. HTTP checks cover sign-in requirements, origin rejection, D1 mutations and R2 bytes, and clean up their test records. Paid AI calls are not part of QA.
 
-The six core screens exclude research-grant finance workflows. See [feature scope](docs/FEATURE-PARITY.md) and [implementation report](docs/IMPLEMENTATION-REPORT.md). Cross-account team sharing, live bank connections and arbitrary multi-currency bookkeeping are not implemented. Preserve [source notices](LICENSE) and bundled third-party notices when reusing the code.
+The six core screens exclude research-grant finance workflows. See [feature scope](docs/FEATURE-PARITY.md) and [implementation report](docs/IMPLEMENTATION-REPORT.md). Cross-account team sharing, live bank connections and arbitrary multi-currency bookkeeping are not implemented. Preserve [source notices](THIRD_PARTY_NOTICES.md) and bundled third-party notices when reusing the code.
