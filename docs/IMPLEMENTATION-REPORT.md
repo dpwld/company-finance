@@ -1,4 +1,4 @@
-# Finance implementation report
+# Ledgernote implementation report
 
 ## Final authorized scope
 
@@ -49,3 +49,7 @@ Cleanup was executed after the parent finished both screenshots. All nine local 
 4. AI execution is request-bound rather than Queue-backed; a browser closing can interrupt the client batch and no background retry is claimed. Paid provider results remain unverified.
 5. The screenshot fixture is local only. This agent made no hosted calls, pushes or deployments. Root owns browser QA, screenshots and publication. Production starts empty without an explicitly executed local fixture helper.
 6. No source history, actual company records, aliases, business numbers, operational accounts or API secrets were copied. Source ownership is documented privately; SheetJS/font/starter licenses are retained without relicensing the inherited source.
+
+## Product naming update
+
+The user-facing product is Ledgernote. Browser metadata, sidebar brand, help/error copy, README title/introduction/image descriptions and npm package/lockfile root names use Ledgernote/ledgernote. Internal Finance component, API, schema, folder and demo identifiers remain unchanged. Typecheck, production build and local authenticated SSR/title verification passed after this rename. The bounded fictional fixture was recreated locally on port 5182 for branded screenshot recapture and remains in place until the parent finishes; the active manifest again lists its exact IDs.

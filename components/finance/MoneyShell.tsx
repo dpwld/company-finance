@@ -41,7 +41,7 @@ export function MoneyShell({ nav, onNav, title, subtitle, actions, who, children
       <aside className="money-aside">
         <div className="money-brand">
           <b>₩</b>
-          <div>Finance<small>MONEY · 한국 자산</small></div>
+          <div>Ledgernote<small>MONEY · 한국 자산</small></div>
         </div>
         <nav className="money-nav" aria-label="사업비 메뉴">
           {MONEY_NAV.map((item) => (
