@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  fetchSpendRules, fetchMoneyHistory, fetchMoneyCategories, matchSpendRule, updateBankTx, updateCardCharge,
-  type BankTx, type CardCharge, type SpendRule,
+  fetchMoneyHistory, fetchMoneyCategories, updateBankTx, updateCardCharge,
+  type BankTx, type CardCharge,
 } from "@/lib/data/finance";
 import { fetchEvidence, type EvidenceFile, type EvidenceLink } from "@/lib/data/evidence";
-import { ALL_CATEGORY_KEYS, SPEND_CATEGORY_OPTIONS, spendCategoryLabel, wonFmt } from "@/lib/finance/spend";
+import { SPEND_CATEGORY_OPTIONS, spendCategoryLabel, wonFmt } from "@/lib/finance/spend";
 import { moneyTransactionRows, filterMoneyTransactions, type MoneyTransactionFilters, type MoneyTransactionRow as Row } from "@/lib/finance/transactions";
 import { MoneyCategoryPicker, type CategorySubject } from "./MoneyCategoryPicker";
 import { MoneyTransactionDetail } from "./MoneyTransactionDetail";
@@ -24,15 +24,15 @@ interface Props {
   cards: CardCharge[];
   evVersion: number;
   onChanged: () => void;
-  tipsExcluded: boolean;
+
   initialFilters?: MoneyTransactionFilters;
 }
 
 const EMPTY_BANK: BankTx[] = [];
 const EMPTY_CARDS: CardCharge[] = [];
-const TYPES = ["전체 유형", "출금·사용", "입금·취소", "카드 사용", "카드 취소", "통장 출금", "통장 입금", "내부이체", "카드대금", "TIPS 환급"];
+const TYPES = ["전체 유형", "출금·사용", "입금·취소", "카드 사용", "카드 취소", "통장 출금", "통장 입금"];
 
-export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, evVersion, onChanged, tipsExcluded, initialFilters = {} }: Props) {
+export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, evVersion, onChanged, initialFilters = {} }: Props) {
   const [range, setRange] = useState<"month" | "all">(initialFilters.range ?? "month");
   const [history, setHistory] = useState<{ cards: CardCharge[]; bank: BankTx[] } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -56,20 +56,18 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
   const [page, setPage] = useState(0);
   const [detail, setDetail] = useState<Row | null>(null);
   const [ev, setEv] = useState<{ files: EvidenceFile[]; links: EvidenceLink[] } | null>(null);
-  const [rules, setRules] = useState<SpendRule[]>([]);
   const job = useAiJob("spend-classify");
 
   useEffect(() => {
     let alive = true;
     fetchEvidence(month, { cards: cards.map((c) => c.id), bank: bank.map((b) => b.id) })
       .then((d) => { if (alive) setEv(d); }).catch(() => {});
-    fetchSpendRules().then((r) => { if (alive) setRules(r); }).catch(() => {});
     return () => { alive = false; };
   }, [month, evVersion, cards, bank]);
 
-  const rows = useMemo(() => moneyTransactionRows(cards, bank, tipsExcluded), [cards, bank, tipsExcluded]);
+  const rows = useMemo(() => moneyTransactionRows(cards, bank), [cards, bank]);
 
-  const accounts = useMemo(() => [...new Set(["전체 계좌·카드", "일반 통장", "TIPS 통장", "국내 카드", "해외 카드", ...rows.map((r) => r.account)])], [rows]);
+  const accounts = useMemo(() => [...new Set(["전체 계좌·카드", "국내 카드", "해외 카드", ...rows.map((r) => r.account)])], [rows]);
 
   /* 거래별 증빙 개수 — 세금계산서도 영수증과 같은 증빙으로 들어온다.
      줄마다 보여줘야 "이건 증빙 붙었나?"를 열어보지 않고 안다. */
@@ -87,43 +85,21 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
   const currentPage = Math.min(page, Math.max(0, Math.ceil(shown.length / 25) - 1));
   const categoryOptions = [...SPEND_CATEGORY_OPTIONS, ...[...new Set([...customCategories, ...rows.map((row) => row.category).filter((key) => key.startsWith("custom:"))])].map((value) => ({ value, label: spendCategoryLabel(value) }))];
   const unclassified = useMemo(() => ({
-    cards: cards.filter((c) => !c.spendCategory && c.amount && !(c.status || "").includes("취소")),
-    bank: bank.filter((b) => !b.spendCategory && (b.withdrawal || b.deposit)),
+    cards: cards.filter((c) => (!c.spendCategory || c.spendCategory === "uncategorized") && c.amount && !(c.status || "").includes("취소")),
+    bank: bank.filter((b) => (!b.spendCategory || b.spendCategory === "uncategorized") && (b.withdrawal || b.deposit)),
   }), [cards, bank]);
   const pending = unclassified.cards.length + unclassified.bank.length;
 
-  /* 미분류 일괄 분류 — 규칙이 먼저(결정적, 토큰 0), 남은 것만 AI로 보낸다.
-     모듈 스코프 잡으로 돌려 화면을 옮겨도 끝까지 진행된다. */
+  /* Optional AI proposes only user-defined categories; the user reviews before saving. */
   function aiCategorize() {
     const cardsSnap = [...unclassified.cards];
     const bankSnap = [...unclassified.bank];
-    const rulesSnap = [...rules];
-    const evSnap = ev;
     startJob("spend-classify", async (h) => {
       let targetCards = cardsSnap;
       let targetBank = bankSnap;
       const total = targetCards.length + targetBank.length;
       let applied = 0;
       h.progress(0, total);
-      if (rulesSnap.length > 0) {
-        const ruledCards = targetCards.filter((c) => matchSpendRule(rulesSnap, [c.merchant, c.industry, c.itemName]));
-        const ruledBank = targetBank.filter((b) => matchSpendRule(rulesSnap, [b.counterparty, b.description]));
-        for (const c of ruledCards) {
-          const cat = matchSpendRule(rulesSnap, [c.merchant, c.industry, c.itemName])!;
-          await updateCardCharge(c.id, cat === "tips_funded" ? { tips_funded: true } : { spend_category: cat });
-        }
-        for (const b of ruledBank) {
-          const cat = matchSpendRule(rulesSnap, [b.counterparty, b.description])!;
-          await updateBankTx(b.id, cat === "tips_funded" ? { tips_funded: true } : { spend_category: cat });
-        }
-        targetCards = targetCards.filter((c) => !ruledCards.includes(c));
-        targetBank = targetBank.filter((b) => !ruledBank.includes(b));
-      }
-      const fileNames = (kind: "card" | "bank", id: string) =>
-        (evSnap?.links ?? [])
-          .filter((l) => (kind === "card" ? l.cardChargeId : l.bankTxId) === id)
-          .map((l) => evSnap?.files.find((f) => f.id === l.evidenceId)?.fileName)
-          .filter((n): n is string => Boolean(n));
       for (let i = 0; i < Math.max(targetCards.length, targetBank.length, 1); i += 120) {
         const cardsChunk = targetCards.slice(i, i + 120);
         const bankChunk = targetBank.slice(i, i + 120);
@@ -131,27 +107,16 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
         const res = await fetch("/api/finance/spend-classify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            cards: cardsChunk.map((c) => ({
-              id: c.id, approvalDate: c.approvalDate, merchant: c.merchant, industry: c.industry,
-              itemName: c.itemName, amount: c.amount, evidence: fileNames("card", c.id),
-            })),
-            bank: bankChunk.map((b) => ({
-              id: b.id, txDate: b.txDate, counterparty: b.counterparty, description: b.description,
-              deposit: b.deposit, withdrawal: b.withdrawal, evidence: fileNames("bank", b.id),
-            })),
-            rules: rulesSnap.map((r) => `${r.pattern} → ${r.category}`),
-          }),
+          body: JSON.stringify({cards: cardsChunk.map(c=>({id:c.id})),bank: bankChunk.map(b=>({id:b.id}))}),
         });
         const json = (await res.json() as any);
-        if (!res.ok) throw new Error(json.detail || json.error || `HTTP ${res.status}`);
+        if (!res.ok) throw new Error(json.detail || json.error?.message || json.error || `HTTP ${res.status}`);
+        if (!window.confirm(`AI가 ${[...(json.cards ?? []), ...(json.bank ?? [])].filter((r: any) => r.category).length}건의 분류를 제안했습니다. ${[...(json.cards ?? []), ...(json.bank ?? [])].filter((r: any) => r.category).map((r: any) => `${cardsSnap.find(c=>c.id===r.id)?.merchant || bankSnap.find(b=>b.id===r.id)?.counterparty || r.id}: ${spendCategoryLabel(r.category)}`).join("\n")}\n적용할까요?`)) continue;
         for (const c of json.cards ?? []) {
-          if (ALL_CATEGORY_KEYS.includes(c.category)) await updateCardCharge(c.id, { spend_category: c.category });
-          h.progress(++applied, total);
+          if (customCategories.includes(c.category)) { await updateCardCharge(c.id, { spend_category: c.category }); h.progress(++applied, total); }
         }
         for (const b of json.bank ?? []) {
-          if (ALL_CATEGORY_KEYS.includes(b.category)) await updateBankTx(b.id, { spend_category: b.category });
-          h.progress(++applied, total);
+          if (customCategories.includes(b.category)) { await updateBankTx(b.id, { spend_category: b.category }); h.progress(++applied, total); }
         }
       }
       refresh();
@@ -182,8 +147,8 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
             {job.running
               ? <span className="money-sub">AI 분류 중 {job.done}/{job.total}</span>
               : job.message && <span className="money-sub">{job.message}</span>}
-            <button type="button" className="money-primary" disabled={job.running || pending === 0} onClick={aiCategorize}>
-              AI 자동 분류{pending ? ` (${pending})` : ""}
+            <button type="button" className="money-primary" disabled={job.running || pending === 0 || customCategories.length === 0} onClick={() => { if (window.confirm("본인 카테고리를 사용해 미분류 거래의 AI 제안을 요청하고 적용합니다. 외부 API 비용이 발생할 수 있습니다. 진행할까요?")) aiCategorize(); }}>
+              AI 분류 제안{pending ? ` (${pending})` : ""}
             </button>
             <button type="button" className="money-text-button" onClick={exportCsv}>CSV 내보내기</button>
           </span>
@@ -201,7 +166,7 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
             {accounts.map((a) => <option key={a}>{a}</option>)}
           </select>
           <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(0); }} aria-label="분류">
-            <option value="">모든 분류</option><option value="uncategorized">미분류</option>{tipsExcluded && <option value="tips_refund">TIPS 환급 차감</option>}
+            <option value="">모든 분류</option><option value="uncategorized">미분류</option>
             {categoryOptions.filter((o) => o.value).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <select value={type} onChange={(e) => { setType(e.target.value); setPage(0); }} aria-label="유형">
@@ -229,7 +194,7 @@ export function MoneyTransactions({ month, bank: monthBank, cards: monthCards, e
                     </td>
                     <td className="money-muted">{r.account}</td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      <button type="button" disabled={r.category === "tips_refund"} aria-label={`${r.name} 카테고리 변경`} onKeyDown={(e) => e.stopPropagation()} onClick={() => setCategorySubject(r)}>{spendCategoryLabel(r.category)} ⌄</button>
+                      <button type="button" aria-label={`${r.name} 카테고리 변경`} onKeyDown={(e) => e.stopPropagation()} onClick={() => setCategorySubject(r)}>{spendCategoryLabel(r.category)} ⌄</button>
                     </td>
                     <td className="money-muted">{r.type}</td>
                     <td className={`money-right${(r.amount ?? 0) < 0 ? " money-negative" : ""}`} style={{ fontWeight: 650 }}>

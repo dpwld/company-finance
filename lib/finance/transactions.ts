@@ -1,38 +1,37 @@
 import type { BankTx, CardCharge } from "@/lib/data/finance";
-import { ACCOUNT_LABEL, accountOf, type AccountKey } from "./accounts";
-import { accountBalances, isVerifiedTipsRefund, isMoneyUncategorized, moneyCardDate, moneyEntries, netCardAmount } from "./money";
+import { accountOf, type AccountKey } from "./accounts";
+import { accountBalances, isMoneyUncategorized, moneyCardDate, moneyEntries, netCardAmount } from "./money";
 import { spendCategoryLabel } from "./spend";
 
 export interface MoneyTransactionTarget { kind: "card" | "bank"; id: string }
 export interface MoneyTransactionRow extends MoneyTransactionTarget {
   key: string; date: string; name: string; memo: string; note: string; account: string; category: string;
-  amount: number | null; type: string; debit: string; credit: string; refundSourceId: string;
+  amount: number | null; type: string; debit: string; credit: string;
   balance?: number | null; approvalDate?: string | null; sourceFile?: string;
 }
 export interface MoneyTransactionFilters {
   range?: "month" | "all"; query?: string; account?: string; category?: string; type?: string;
 }
 
-export function moneyTransactionRows(cards: CardCharge[], bank: BankTx[], tipsExcluded: boolean): MoneyTransactionRow[] {
-  const includedBankIds = new Set(moneyEntries([], bank, true).map((row) => row.id));
+export function moneyTransactionRows(cards: CardCharge[], bank: BankTx[]): MoneyTransactionRow[] {
   return [
     ...cards.map((c) => ({
       key: `c${c.id}`, kind: "card" as const, id: c.id,
       date: moneyCardDate(c), name: c.merchant || c.itemName || "카드 결제",
       memo: c.industry || "", note: c.remarks, account: (c.cardMeta?.["승인구분"] ?? "").includes("해외") || c.cardMeta?.["해외승인금액"] ? "해외 카드" : "국내 카드", category: c.spendCategory,
       amount: netCardAmount(c) == null ? null : -netCardAmount(c)!, type: (netCardAmount(c) ?? 0) < 0 ? "카드 취소" : "카드 사용",
-      debit: c.debitAccount, credit: c.creditAccount, refundSourceId: "", approvalDate: c.approvalDate,
+      debit: c.debitAccount, credit: c.creditAccount, approvalDate: c.approvalDate,
     })),
     ...bank.map((b) => ({
       key: `b${b.id}`, kind: "bank" as const, id: b.id,
       date: b.txDate, name: b.counterparty || b.description || "계좌 거래",
-      memo: b.description || "", note: b.memo, account: ACCOUNT_LABEL[accountOf(b.sourceFile)],
-      category: tipsExcluded && isVerifiedTipsRefund(b) ? "tips_refund" : b.spendCategory,
+      memo: b.description || "", note: b.memo, account: accountOf(b.sourceFile),
+      category: b.spendCategory,
       amount: (b.deposit ?? 0) - (b.withdrawal ?? 0),
-      type: isVerifiedTipsRefund(b) ? "TIPS 환급" : b.spendCategory === "internal" ? "내부이체" : b.spendCategory === "card_payment" ? "카드대금" : b.withdrawal ? "통장 출금" : "통장 입금",
-      debit: b.debitAccount, credit: b.creditAccount, refundSourceId: b.tipsRefundSourceId ?? "", balance: b.balance, sourceFile: b.sourceFile,
+      type: b.withdrawal ? "통장 출금" : "통장 입금",
+      debit: b.debitAccount, credit: b.creditAccount, balance: b.balance, sourceFile: b.sourceFile,
     })),
-  ].filter((row) => !tipsExcluded || row.kind === "card" || includedBankIds.has(row.id));
+  ];
 }
 
 export function filterMoneyTransactions(rows: MoneyTransactionRow[], filters: MoneyTransactionFilters, sort: "recent" | "amount" | "oldest" = "recent") {

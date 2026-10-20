@@ -2,14 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { fetchMoneyBankHistory, type BankTx, type CardCharge } from "@/lib/data/finance";
-import { ACCOUNT_LABEL } from "@/lib/finance/accounts";
 import { accountBalances, netCardAmount } from "@/lib/finance/money";
 import { monthlyAccountBalances, type MoneyTransactionFilters } from "@/lib/finance/transactions";
 import { MoneyBalanceCard } from "./MoneySummaryCards";
 import { recentMonths, wonFmt } from "@/lib/finance/spend";
 
 /* 계좌와 자산 — 시안의 "계좌·자산" 화면.
-   요약(잔액 추이 + 통장·카드) / 일반 통장 / TIPS 통장 서브탭.
+   요약과 사용자가 가져온 명세서 출처별 계좌 서브탭.
    계좌는 업로드 파일명으로 가린다(accounts.ts). */
 
 interface Props {
@@ -51,7 +50,7 @@ function Spark({ data }: { data: { date: string; balance: number }[] }) {
 export function MoneyAccounts({ month, bank, cards, onTransactions }: Props) {
   const months = useMemo(() => recentMonths(month, 6), [month]);
   const [history, setHistory] = useState<BankTx[] | null>(null);
-  const [view, setView] = useState<"summary" | "general" | "tips">("summary");
+  const [view, setView] = useState<string>("summary");
 
   useEffect(() => {
     let alive = true;
@@ -86,14 +85,13 @@ export function MoneyAccounts({ month, bank, cards, onTransactions }: Props) {
     <>
       <div className="money-tabs">
         <button type="button" className={view === "summary" ? "active" : ""} onClick={() => setView("summary")}>요약</button>
-        <button type="button" className={view === "general" ? "active" : ""} onClick={() => setView("general")}>일반 통장</button>
-        <button type="button" className={view === "tips" ? "active" : ""} onClick={() => setView("tips")}>TIPS 통장</button>
+        {accounts.map(a => <button key={a.key} type="button" className={view === a.key ? "active" : ""} onClick={() => setView(a.key)}>{a.label}</button>)}
       </div>
 
         <div className="money-grid">
           <div className="money-stack">
             <section className="money-card">
-              <p className="money-label">{view === "summary" ? "통장 잔액 합계" : `${ACCOUNT_LABEL[view]} 잔액`}</p>
+              <p className="money-label">{view === "summary" ? "통장 잔액 합계" : `${view} 잔액`}</p>
               <div className="money-amount">{balance == null ? "자료 없음" : wonFmt(balance)}</div>
               <p className="money-sub">명세서 기준 · 최근 6개월</p>
               {history === null ? <p className="money-empty">불러오는 중입니다.</p> : <Spark data={spark} />}
@@ -105,7 +103,7 @@ export function MoneyAccounts({ month, bank, cards, onTransactions }: Props) {
               {accounts.length === 0 ? <p className="money-empty">잔액 정보가 없습니다.</p> : accounts.map((a) => (
                 <div key={a.key} className="money-account-row">
                   <span className="money-account-label">
-                    <span className={`money-account-icon${a.key === "tips" ? " tips" : ""}`}>▤</span>
+                    <span className="money-account-icon">▤</span>
                     <span>
                       {a.label}
                       <span className="money-sub" style={{ display: "block" }}>{a.at} 기준</span>

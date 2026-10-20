@@ -21,12 +21,6 @@ export const MONEY_NAV: MoneyNavItem[] = [
   { id: "budget", label: "예산", glyph: "◉" },
   { id: "accounts", label: "계좌·카드", glyph: "▤" },
   { id: "tx", label: "거래 내역", glyph: "≡" },
-  { id: "nonspend", label: "지출 분석 (내부)", glyph: "◇" },
-  { id: "tips", label: "TIPS", glyph: "◆" },
-  { id: "req", label: "연구비 요청", glyph: "+" },
-  { id: "hist", label: "요청 내역", glyph: "▤" },
-  { id: "evidence", label: "사후 증빙", glyph: "□" },
-  { id: "settings", label: "설정", glyph: "⚙" },
 ];
 
 interface Props {
@@ -80,22 +74,5 @@ export function MoneyShell({ nav, onNav, title, subtitle, actions, who, children
         {children}
       </div>
     </div>
-  );
-}
-
-/** 헤더의 TIPS 지원금 제외 스위치. */
-export function TipsToggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      className="money-tips-toggle"
-      title="일반 통장 직접 출금 + 카드 순사용액 − 확인된 TIPS 환급(입금월)을 보여줍니다."
-      onClick={() => onChange(!on)}
-    >
-      <span>TIPS 지원금 제외</span>
-      <span className="money-switch" aria-hidden="true" />
-    </button>
   );
 }

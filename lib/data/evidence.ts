@@ -1,9 +1,7 @@
 import { createClient } from "@/lib/transport";
 import { collectPages, identicalEvidence } from "@/lib/finance/evidenceIntegrity";
 
-/* TIPS evidence data layer: receipt/invoice files in the private "evidence"
-   bucket + links to card_charges. All access requires the finance grant
-   (RLS-enforced on tables, bucket and this client's queries alike). */
+/* Private receipt files and owner-scoped transaction links. */
 
 export interface EvidenceFile {
   id: string;

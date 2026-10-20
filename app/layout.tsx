@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Finance Workspace",
-  description: "사업비 · 거래 · 증빙 · TIPS 연구비 워크스페이스",
+  description: "거래 · 분류 · 예산 · 증빙 워크스페이스",
   other: {
     "codex-preview": "development",
   },

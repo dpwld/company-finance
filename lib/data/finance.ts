@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/transport";
 import type { ParsedBankTx, ParsedCard, ParsedInvoice } from "@/lib/finance/parse";
 
-/* Supabase data layer for the Finance tool (admin-only via RLS).
+/* Authenticated Finance data contracts backed by owner-scoped D1.
    Uploads upsert with ignoreDuplicates on dedupe_key so re-uploading the
    same file never duplicates rows. */
 
@@ -17,20 +17,13 @@ export interface BankTx {
   status: string;
   memo: string;
   category: string;
-  tipsEligible: boolean | null;
-  tipsNote: string;
-  /** Spending 탭 분류 키 (SPEND_CATEGORIES + income/internal/card_payment). */
+  /** Spending 탭 분류 키 (사용자가 저장한 카테고리). */
   spendCategory: string;
-  /** TIPS 지원금으로 집행/수령된 건 — 카테고리와 별개의 체크 플래그. */
-  tipsFunded: boolean;
   accountLabel: string;
   /** 업로드한 파일 이름 — 계좌 구분(accountOf)의 유일한 단서다. */
   sourceFile: string;
   matchedInvoice: string | null;
-  /** Explicitly confirmed TIPS withdrawal paired with this general-account deposit. */
-  tipsRefundSourceId?: string | null;
-  tipsRefundSource?: BankTx | null;
-  /** 분개 계정과목 (재무제표용) — AI 제안 + 인라인 확정. */
+  /** 분개 계정과목 (재무제표용) — 직접 입력. */
   debitAccount: string;
   creditAccount: string;
 }
@@ -43,18 +36,15 @@ export interface CardCharge {
   status: string;
   vat: number | null;
   itemName: string;
-  classification: string;
   /** Spending 탭 분류 키. */
   spendCategory: string;
-  /** TIPS 지원금으로 집행된 건 — 카테고리와 별개의 체크 플래그. */
-  tipsFunded: boolean;
   remarks: string;
   transferred: string;
   amount: number | null;
   purchaseDate: string | null;
   cardMeta: Record<string, string>;
   month: string;
-  /** 분개 계정과목 (재무제표용) — AI 제안 + 인라인 확정. */
+  /** 분개 계정과목 (재무제표용) — 직접 입력. */
   debitAccount: string;
   creditAccount: string;
 }
@@ -70,7 +60,7 @@ export interface TaxInvoice {
   taxAmount: number;
   totalAmount: number;
   matchedTx: string | null;
-  /** 증빙 업로드에서 AI로 등록된 건이면 그 증빙 파일 id. */
+  /** 연결된 증빙 파일 ID. */
   evidenceId: string | null;
 }
 
@@ -87,15 +77,10 @@ function mapBank(r: Record<string, unknown>): BankTx {
     status: (r.status as string) ?? "",
     memo: (r.memo as string) ?? "",
     category: (r.category as string) ?? "",
-    tipsEligible: r.tips_eligible == null ? null : Boolean(r.tips_eligible),
-    tipsNote: (r.tips_note as string) ?? "",
     spendCategory: (r.spend_category as string) ?? "",
-    tipsFunded: Boolean(r.tips_funded),
     accountLabel: (r.account_label as string) ?? "",
     sourceFile: (r.source_file as string) ?? "",
     matchedInvoice: (r.matched_invoice as string) ?? null,
-    tipsRefundSourceId: (r.tips_refund_source_id as string) ?? null,
-    tipsRefundSource: r.tips_refund_source ? mapBank(r.tips_refund_source as Record<string, unknown>) : null,
     debitAccount: (r.debit_account as string) ?? "",
     creditAccount: (r.credit_account as string) ?? "",
   };
@@ -110,9 +95,7 @@ function mapCard(r: Record<string, unknown>): CardCharge {
     status: (r.status as string) ?? "",
     vat: r.vat == null ? null : Number(r.vat),
     itemName: (r.item_name as string) ?? "",
-    classification: (r.classification as string) ?? "",
     spendCategory: (r.spend_category as string) ?? "",
-    tipsFunded: Boolean(r.tips_funded),
     remarks: (r.remarks as string) ?? "",
     transferred: (r.transferred as string) ?? "",
     amount: r.amount == null ? null : Number(r.amount),
@@ -151,73 +134,6 @@ function monthBounds(month: string): { from: string; to: string } {
   };
 }
 
-/** TIPS(RCMS) 창 — 카드 이용기간 기준 [당월 9일, 익월 9일).
-    예: "2026-07" = 2026-07-09 ~ 2026-08-08. */
-export function tipsBounds(month: string): { from: string; to: string } {
-  const [y, m] = month.split("-").map(Number);
-  const nextY = m === 12 ? y + 1 : y;
-  const nextM = m === 12 ? 1 : m + 1;
-  return { from: `${month}-09`, to: `${nextY}-${String(nextM).padStart(2, "0")}-09` };
-}
-
-/** 달력월 조회 — 카드는 승인일, 은행은 거래일, 세금계산서는 작성일 기준으로
-    같은 [1일, 말일] 창에 모인다. (예전에는 카드만 청구월(month 컬럼)로 묶여
-    은행과 창이 어긋났다.) 승인일이 없는 카드 건은 예전처럼 month 컬럼으로 담는다. */
-export async function fetchFinanceMonth(month: string): Promise<{ bank: BankTx[]; cards: CardCharge[]; invoices: TaxInvoice[] }> {
-  const sb = createClient();
-  const { from, to } = monthBounds(month);
-  const [bankRes, cardRes, invRes] = await Promise.all([
-    sb.from("bank_transactions").select("*").gte("tx_date", from).lt("tx_date", to).order("tx_date").order("tx_time"),
-    sb.from("card_charges").select("*")
-      .or(`and(approval_date.gte.${from},approval_date.lt.${to}),and(approval_date.is.null,month.eq.${month})`)
-      .order("approval_date"),
-    sb.from("tax_invoices").select("*").gte("issue_date", from).lt("issue_date", to).order("issue_date"),
-  ]);
-  const err = bankRes.error || cardRes.error || invRes.error;
-  if (err) throw err;
-  return {
-    bank: (bankRes.data ?? []).map(mapBank),
-    cards: (cardRes.data ?? []).map(mapCard),
-    invoices: (invRes.data ?? []).map(mapInvoice),
-  };
-}
-
-/** TIPS(RCMS) 탭 전용 조회 — 카드 이용기간 [당월 9일, 익월 9일) 창.
-    카드 승인일과 은행 거래일 모두 같은 창으로 맞춰 한 화면에서 대사할 수 있게 한다. */
-export async function fetchTipsMonth(month: string): Promise<{ bank: BankTx[]; cards: CardCharge[] }> {
-  const sb = createClient();
-  const { from, to } = tipsBounds(month);
-  const [bankRes, cardRes] = await Promise.all([
-    sb.from("bank_transactions").select("*").gte("tx_date", from).lt("tx_date", to).order("tx_date").order("tx_time"),
-    sb.from("card_charges").select("*").gte("approval_date", from).lt("approval_date", to).order("approval_date"),
-  ]);
-  const err = bankRes.error || cardRes.error;
-  if (err) throw err;
-  return { bank: (bankRes.data ?? []).map(mapBank), cards: (cardRes.data ?? []).map(mapCard) };
-}
-
-/** Rows evidence can attach to, over a WIDE window (previous month 1st →
-   end of this month) regardless of billing-month bucketing. A "0721쿠팡"
-   receipt in the July folder belongs to a charge billed in AUGUST — matching
-   only against the on-screen month made such files permanently unmatched. */
-export async function fetchMatchWindow(month: string): Promise<{ bank: BankTx[]; cards: CardCharge[] }> {
-  const sb = createClient();
-  const [y, m] = month.split("-").map(Number);
-  const prev = m === 1 ? `${y - 1}-12-01` : `${y}-${String(m - 1).padStart(2, "0")}-01`;
-  // 끝은 익월 9일 — TIPS 이용기간(당월 9일~익월 8일)에 드는 익월 초 거래까지
-  // 후보에 넣어야 "1007…" 같은 증빙이 이 달 장부에서 붙는다.
-  const next = m === 12 ? `${y + 1}-01-09` : `${y}-${String(m + 1).padStart(2, "0")}-09`;
-  const [bankRes, cardRes] = await Promise.all([
-    sb.from("bank_transactions").select("*").gte("tx_date", prev).lt("tx_date", next).order("tx_date"),
-    sb.from("card_charges").select("*").gte("approval_date", prev).lt("approval_date", next).order("approval_date"),
-  ]);
-  const err = bankRes.error || cardRes.error;
-  if (err) throw err;
-  return { bank: (bankRes.data ?? []).map(mapBank), cards: (cardRes.data ?? []).map(mapCard) };
-}
-
-/** Months that have any data, newest first (for the month picker). */
-/** 거래 분할 줄 — 한 카드 결제를 카테고리별 여러 줄로 쪼갠 것. */
 export interface ChargeSplit {
   id: string;
   /** 분할 대상 — 카드 결제 건이면 cardChargeId, 은행 이체 건이면 bankTxId. */
@@ -226,13 +142,8 @@ export interface ChargeSplit {
   label: string;
   amount: number;
   spendCategory: string;
-  /** TIPS 지원금 집행 체크 (2026-10-01 SQL). */
-  tipsFunded: boolean;
-  /** 세부항목별 분개(Transactions 탭). 2026-08-05d SQL. */
   debitAccount: string;
   creditAccount: string;
-  /** 세부항목별 TIPS 처리(TIPS 탭). */
-  classification: string;
   status: string;
   remarks: string;
 }
@@ -245,10 +156,8 @@ function mapSplit(r: Record<string, unknown>): ChargeSplit {
     label: (r.label as string) ?? "",
     amount: Number(r.amount ?? 0),
     spendCategory: (r.spend_category as string) ?? "",
-    tipsFunded: Boolean(r.tips_funded),
     debitAccount: (r.debit_account as string) ?? "",
     creditAccount: (r.credit_account as string) ?? "",
-    classification: (r.classification as string) ?? "",
     status: (r.status as string) ?? "",
     remarks: (r.remarks as string) ?? "",
   };
@@ -266,13 +175,10 @@ export async function fetchChargeSplits(): Promise<ChargeSplit[]> {
 /** 분할 대상 — 카드 결제 건 또는 은행 이체 건 중 하나. */
 export type SplitTarget = { cardChargeId: string } | { bankTxId: string };
 
-const splitKey = (t: SplitTarget) => ("cardChargeId" in t ? "card_charge_id" : "bank_tx_id");
-const splitId = (t: SplitTarget) => ("cardChargeId" in t ? t.cardChargeId : t.bankTxId);
-
 /** 해당 거래의 분할을 통째로 교체 (빈 배열 = 분할 해제). 카드·이체 공용. */
 export async function saveChargeSplits(
   target: SplitTarget | string,
-  lines: { label: string; amount: number; spendCategory: string; classification?: string; status?: string; remarks?: string }[],
+  lines: { label: string; amount: number; spendCategory: string; status?: string; remarks?: string }[],
 ): Promise<void> {
   const t: SplitTarget = typeof target === "string" ? { cardChargeId: target } : target;
   const response = await fetch("/api/splits", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target: t, lines }) });
@@ -281,14 +187,12 @@ export async function saveChargeSplits(
 
 export async function updateChargeSplit(
   id: string,
-  patch: { spendCategory?: string; tipsFunded?: boolean; debitAccount?: string; creditAccount?: string; classification?: string; status?: string; remarks?: string },
+  patch: { spendCategory?: string; debitAccount?: string; creditAccount?: string; status?: string; remarks?: string },
 ): Promise<void> {
   const row: Record<string, unknown> = {};
   if (patch.spendCategory !== undefined) row.spend_category = patch.spendCategory;
-  if (patch.tipsFunded !== undefined) row.tips_funded = patch.tipsFunded;
   if (patch.debitAccount !== undefined) row.debit_account = patch.debitAccount;
   if (patch.creditAccount !== undefined) row.credit_account = patch.creditAccount;
-  if (patch.classification !== undefined) row.classification = patch.classification;
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.remarks !== undefined) row.remarks = patch.remarks;
   const { error } = await createClient().from("charge_splits").update(row).eq("id", id);
@@ -296,127 +200,6 @@ export async function updateChargeSplit(
 }
 
 /** 분류 규칙 — 패턴이 상대처/가맹점/적요에 포함되면 해당 카테고리로 자동 분류. */
-export interface SpendRule {
-  id: string;
-  pattern: string;
-  category: string;
-  matchMode?: "contains" | "exact";
-}
-
-export async function fetchSpendRules(): Promise<SpendRule[]> {
-  const { data, error } = await createClient()
-    .from("spend_rules")
-    .select("id, pattern, category, match_mode")
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return (data ?? []).map((r: any) => ({ id: r.id as string, pattern: (r.pattern as string) ?? "", category: (r.category as string) ?? "", matchMode: r.match_mode === "exact" ? "exact" : "contains" }));
-}
-
-export async function insertSpendRule(pattern: string, category: string, createdByKey = "", matchMode: "contains" | "exact" = "exact"): Promise<SpendRule> {
-  const table = createClient().from("spend_rules");
-  const existing = matchMode === "exact" ? (await fetchSpendRules()).find((rule) => rule.matchMode === "exact" && rule.pattern.trim().toLocaleLowerCase() === pattern.trim().toLocaleLowerCase()) : null;
-  const query = existing
-    ? table.update({ category }).eq("id", existing.id)
-    : table.insert({ pattern: pattern.trim(), category, created_by_key: createdByKey, match_mode: matchMode });
-  const { data, error } = await query.select("id, pattern, category, match_mode").single();
-  if (error) throw error;
-  return { id: data.id as string, pattern: data.pattern as string, category: data.category as string, matchMode: data.match_mode === "exact" ? "exact" : "contains" };
-}
-
-export async function deleteSpendRule(id: string): Promise<void> {
-  const { error } = await createClient().from("spend_rules").delete().eq("id", id);
-  if (error) throw error;
-}
-
-/** 규칙 매칭: 주어진 텍스트들 중 하나라도 패턴을 포함하면 그 규칙의 카테고리. */
-/** 담당자가 이미 확정한 TIPS 판정 이력 — 월과 무관하게 최근 것부터.
-    AI 분류에 예시로 넣어, 지난달에 내린 판정을 이번 달에도 그대로 따르게 한다. */
-export interface ConfirmedTipsCase {
-  merchant: string;
-  itemName: string;
-  classification: string;
-  status: string;
-  note: string;
-}
-
-export async function fetchConfirmedTipsHistory(limit = 150): Promise<ConfirmedTipsCase[]> {
-  const { data, error } = await createClient()
-    .from("card_charges")
-    .select("merchant,item_name,classification,status,remarks,approval_date")
-    .neq("status", "")
-    .order("approval_date", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []).map((r: any) => ({
-    merchant: (r.merchant as string) ?? "",
-    itemName: (r.item_name as string) ?? "",
-    classification: (r.classification as string) ?? "",
-    status: (r.status as string) ?? "",
-    note: (r.remarks as string) ?? "",
-  })).filter((c: any) => c.merchant || c.itemName);
-}
-
-export function matchSpendRule(rules: SpendRule[], texts: (string | null | undefined)[]): string | null {
-  const hay = texts.filter(Boolean).join(" ").toLowerCase();
-  if (!hay) return null;
-  for (const r of rules) {
-    const p = r.pattern.trim().toLowerCase();
-    if (p && (r.matchMode === "exact" ? (texts[0] ?? "").trim().toLocaleLowerCase() === p : hay.includes(p))) return r.category;
-  }
-  return null;
-}
-
-/** Spending 추이용 경량 조회 — 지정한 월 목록의 (월, 금액, 분류)만. */
-export async function fetchSpendSeries(months: string[]): Promise<{
-  cards: { month: string; amount: number | null; status: string; spendCategory: string; tipsFunded: boolean }[];
-  bank: { month: string; deposit: number | null; withdrawal: number | null; spendCategory: string; tipsFunded: boolean }[];
-}> {
-  const sb = createClient();
-  const from = `${months[0]}-01`;
-  // "-31" 상한은 31일 없는 달에서 date 비교가 22008로 죽는다 — 다음 달 1일 미만으로.
-  const [ly, lm] = months[months.length - 1].split("-").map(Number);
-  const to = lm === 12 ? `${ly + 1}-01-01` : `${ly}-${String(lm + 1).padStart(2, "0")}-01`;
-  // 카드는 본문(fetchFinanceMonth)과 같은 승인일 달력월 기준 — 청구월(month
-  // 컬럼, 이용기간 9일~익월 8일)로 묶으면 추이 바와 탭 합계가 어긋난다.
-  // 승인일이 없는 건만 예전처럼 month 컬럼으로 담는다.
-  const [cardsRes, bankRes] = await Promise.all([
-    sb.from("card_charges").select("month, approval_date, amount, status, spend_category, tips_funded")
-      .or(`and(approval_date.gte.${from},approval_date.lt.${to}),and(approval_date.is.null,month.in.(${months.join(",")}))`),
-    sb.from("bank_transactions").select("tx_date, deposit, withdrawal, spend_category, tips_funded").gte("tx_date", from).lt("tx_date", to),
-  ]);
-  if (cardsRes.error) throw cardsRes.error;
-  if (bankRes.error) throw bankRes.error;
-  return {
-    cards: (cardsRes.data ?? []).map((r: any) => ({
-      month: ((r.approval_date as string) ?? "").slice(0, 7) || ((r.month as string) ?? ""),
-      amount: (r.amount as number) ?? null,
-      status: (r.status as string) ?? "",
-      spendCategory: (r.spend_category as string) ?? "",
-      tipsFunded: Boolean(r.tips_funded),
-    })),
-    bank: (bankRes.data ?? []).map((r: any) => ({
-      month: ((r.tx_date as string) ?? "").slice(0, 7),
-      deposit: (r.deposit as number) ?? null,
-      withdrawal: (r.withdrawal as number) ?? null,
-      spendCategory: (r.spend_category as string) ?? "",
-      tipsFunded: Boolean(r.tips_funded),
-    })),
-  };
-}
-
-export async function fetchFinanceMonths(): Promise<string[]> {
-  const sb = createClient();
-  const [cards, bank] = await Promise.all([
-    sb.from("card_charges").select("month"),
-    sb.from("bank_transactions").select("tx_date"),
-  ]);
-  const months = new Set<string>();
-  for (const r of cards.data ?? []) if (r.month) months.add(r.month as string);
-  for (const r of bank.data ?? []) months.add((r.tx_date as string).slice(0, 7));
-  return [...months].sort().reverse();
-}
-
-/** Upsert parsed rows; duplicates (same dedupe_key) are skipped. Returns inserted counts. */
 export async function importParsed(
   parsed: { cards: ParsedCard[]; bank: ParsedBankTx[]; invoices: ParsedInvoice[] },
   sourceFile: string,
@@ -444,7 +227,6 @@ export async function importParsed(
       if (c.status) patch.status = c.status;
       if (c.vat != null) patch.vat = c.vat;
       if (c.item_name) patch.item_name = c.item_name;
-      if (c.classification) patch.classification = c.classification;
       if (c.remarks) patch.remarks = c.remarks;
       if (c.transferred) patch.transferred = c.transferred;
       if (c.amount != null) patch.amount = c.amount;
@@ -471,7 +253,6 @@ export async function importParsed(
       if (b.status) patch.status = b.status;
       if (b.memo) patch.memo = b.memo;
       if (b.category) patch.category = b.category;
-      if (b.tips_note) patch.tips_note = b.tips_note;
       if (!Object.keys(patch).length) continue;
       const { error: mergeErr } = await sb.from("bank_transactions").update(patch).eq("dedupe_key", b.dedupe_key);
       if (mergeErr) throw mergeErr;
@@ -505,47 +286,6 @@ export async function matchInvoice(invoiceId: string, txId: string | null): Prom
   if (error) throw error;
 }
 
-/* 반복 결제·잔액 추이는 여러 달을 한꺼번에 봐야 한다. fetchSpendSeries는 월별
-   합계만 주므로(가맹점·잔액이 없다) 가벼운 행 단위로 따로 읽는다. */
-export interface HistoryCard { date: string; merchant: string; amount: number; status: string; spendCategory: string; tipsFunded: boolean }
-export interface HistoryBank { date: string; time: string; balance: number | null; sourceFile: string; deposit: number | null; withdrawal: number | null }
-
-export async function fetchFinanceHistory(months: string[]): Promise<{ cards: HistoryCard[]; bank: HistoryBank[] }> {
-  const sb = createClient();
-  const from = `${months[0]}-01`;
-  const [ly, lm] = months[months.length - 1].split("-").map(Number);
-  const to = lm === 12 ? `${ly + 1}-01-01` : `${ly}-${String(lm + 1).padStart(2, "0")}-01`;
-  const [cardsRes, bankRes] = await Promise.all([
-    sb.from("card_charges").select("approval_date, merchant, amount, status, spend_category, tips_funded")
-      .gte("approval_date", from).lt("approval_date", to).order("approval_date"),
-    sb.from("bank_transactions").select("tx_date, tx_time, balance, source_file, deposit, withdrawal")
-      .gte("tx_date", from).lt("tx_date", to).order("tx_date").order("tx_time"),
-  ]);
-  if (cardsRes.error) throw cardsRes.error;
-  if (bankRes.error) throw bankRes.error;
-  return {
-    cards: (cardsRes.data ?? []).map((r: any) => ({
-      date: (r.approval_date as string) ?? "",
-      merchant: (r.merchant as string) ?? "",
-      amount: Number(r.amount) || 0,
-      status: (r.status as string) ?? "",
-      spendCategory: (r.spend_category as string) ?? "",
-      tipsFunded: Boolean(r.tips_funded),
-    })),
-    bank: (bankRes.data ?? []).map((r: any) => ({
-      date: (r.tx_date as string) ?? "",
-      time: (r.tx_time as string) ?? "",
-      balance: (r.balance as number) ?? null,
-      sourceFile: (r.source_file as string) ?? "",
-      deposit: (r.deposit as number) ?? null,
-      withdrawal: (r.withdrawal as number) ?? null,
-    })),
-  };
-}
-
-/* 카테고리별 월 예산. 예전에는 app_settings 'spend_budget'에 JSON으로 넣었는데
-   그 테이블은 쓰기가 admin 전용이라 Finance 담당자가 저장할 수 없었다 —
-   has_tool('finance') 범위의 전용 테이블로 옮겼다. */
 export async function fetchBudgets(): Promise<Record<string, number>> {
   const { data, error } = await createClient().from("finance_budgets").select("category, amount");
   if (error) throw error;
@@ -565,7 +305,7 @@ export async function saveBudget(category: string, amount: number): Promise<void
 }
 
 
-/** Native money screens use purchase-date months. TIPS APIs above keep their original window. */
+/** Purchase-date history with persisted user classifications only. */
 export async function fetchMoneyHistory(months?: string[]): Promise<{ cards: CardCharge[]; bank: BankTx[] }> {
   const sb = createClient();
   const from = months?.[0] ? `${months[0]}-01` : null;
@@ -581,18 +321,14 @@ export async function fetchMoneyHistory(months?: string[]): Promise<{ cards: Car
     if ((data?.length ?? 0) < pageSize) break;
   }
   for (let offset = 0; ; offset += pageSize) {
-    let query = sb.from("bank_transactions").select("*, tips_refund_source:bank_transactions!tips_refund_source_id(*)").order("id").range(offset, offset + pageSize - 1);
+    let query = sb.from("bank_transactions").select("*").order("id").range(offset, offset + pageSize - 1);
     if (from && to) query = query.gte("tx_date", from).lt("tx_date", to);
     const { data, error } = await query;
     if (error) throw error;
     bank.push(...(data ?? []).map(mapBank));
     if ((data?.length ?? 0) < pageSize) break;
   }
-  const rules = (await fetchSpendRules()).filter((rule) => rule.matchMode === "exact").reverse();
-  return {
-    cards: cards.map((row) => ({ ...row, spendCategory: row.spendCategory || matchSpendRule(rules, [row.merchant || row.itemName || "카드 결제"]) || "" })),
-    bank: bank.map((row) => ({ ...row, spendCategory: row.spendCategory || matchSpendRule(rules, [row.counterparty || row.description || "계좌 거래"]) || "" })),
-  };
+  return { cards, bank };
 }
 
 export async function fetchMoneyMonth(month: string): Promise<{ cards: CardCharge[]; bank: BankTx[]; invoices: TaxInvoice[] }> {
@@ -623,9 +359,39 @@ export async function fetchMoneyCategories(): Promise<string[]> {
 
 export async function createMoneyCategory(label: string): Promise<string> {
   const name = label.trim();
-  if (!name || name.length > 40 || name === "TIPS 환급 차감") throw new Error("카테고리 이름은 1~40자로 입력하세요. TIPS 환급 차감은 계산 항목입니다.");
+  if (!name || name.length > 40) throw new Error("카테고리 이름은 1~40자로 입력하세요.");
   const key = `custom:${name}`;
   const { error } = await createClient().from("finance_categories").upsert({ key }, { ignoreDuplicates: true });
   if (error) throw error;
   return key;
+}
+
+export interface SpendRule { id: string; pattern: string; category: string; matchMode: "contains" | "exact"; priority: number }
+export { matchSpendRule } from "@/lib/finance/rules";
+export async function fetchSpendRules(): Promise<SpendRule[]> {
+ const { data, error } = await createClient().from("spend_rules").select("*").order("priority").order("id");
+ if (error) throw error;
+ return (data ?? []).map((r: any) => ({ id: r.id, pattern: r.pattern, category: r.category, matchMode: r.match_mode || "exact", priority: r.priority ?? 100 })).sort((a: SpendRule, b: SpendRule) => a.priority - b.priority || a.id.localeCompare(b.id));
+}
+export async function insertSpendRule(pattern: string, category: string, _createdBy = "", matchMode: "contains" | "exact" = "exact", priority = 100): Promise<SpendRule> {
+ const { data, error } = await createClient().from("spend_rules").insert({ pattern: pattern.trim(), category, match_mode: matchMode, priority }).select("*").single();
+ if (error) throw error;
+ return { id: data.id, pattern: data.pattern, category: data.category, matchMode: data.match_mode, priority: data.priority };
+}
+export async function updateSpendRule(id: string, patch: { pattern: string; category: string; match_mode: "exact" | "contains"; priority: number }): Promise<void> {
+ const { error } = await createClient().from("spend_rules").update(patch).eq("id", id); if(error) throw error;
+}
+export async function deleteSpendRule(id: string): Promise<void> {
+ const { error } = await createClient().from("spend_rules").delete().eq("id", id); if(error) throw error;
+}
+export async function renameMoneyCategory(key: string, label: string): Promise<void> {
+ const { error } = await createClient().from("finance_categories").update({ key: `custom:${label.trim()}` }).eq("key", key); if(error) throw error;
+}
+export async function deleteMoneyCategory(key: string): Promise<void> {
+ const { error } = await createClient().from("finance_categories").delete().eq("key", key); if(error) throw error;
+}
+export interface RulePreview { kind: "card" | "bank"; id: string; name: string; category: string; ruleId: string }
+export async function previewSpendRules(apply = false): Promise<{ matches: RulePreview[]; applied: number }> {
+ const response = await fetch("/api/rules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ apply }) });
+ const value = await response.json() as { matches: RulePreview[]; applied: number; error?: string }; if(!response.ok) throw new Error(value.error || "규칙 적용 실패"); return value;
 }

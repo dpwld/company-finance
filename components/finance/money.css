@@ -91,13 +91,8 @@
 .money-month button { padding: 5px 9px; }
 .money-month select { border: 0; background: none; padding: 6px; font-weight: 600; font-size: 13px; }
 
-/* TIPS 지원금 제외 토글 */
-.money-tips-toggle { display: flex; align-items: center; gap: 7px; white-space: nowrap; border: 1px solid var(--line); font-size: 12px; }
 .money-switch { width: 30px; height: 18px; background: #d9d9d9; border-radius: 20px; position: relative; flex-shrink: 0; }
 .money-switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: #ffffff; border-radius: 50%; transition: transform 0.15s; }
-.money-tips-toggle[aria-checked="true"] { background: #f4f4f4; color: #404040; border-color: #e7e7e7; }
-.money-tips-toggle[aria-checked="true"] .money-switch { background: var(--red); }
-.money-tips-toggle[aria-checked="true"] .money-switch::before { transform: translateX(12px); }
 
 /* ── 카드·레이아웃 ────────────────────────────────── */
 .money-card { background: #ffffff; border: 0; border-radius: 14px; padding: 20px; min-width: 0; box-shadow: 0 1px 2px #20232904; }
@@ -116,7 +111,6 @@
 .money-right { text-align: right; }
 .money-empty { text-align: center; padding: 40px; color: var(--sub); }
 
-/* 섹션 안 서브탭 (요약 / 일반 통장 / TIPS 통장 …) */
 .money-tabs { display: flex; gap: 24px; border-bottom: 1px solid #e5e5e5; margin-bottom: 24px; }
 .money-tabs button { border: 0; background: transparent; border-radius: 0; padding: 12px 2px; color: var(--sub); }
 .money-tabs button.active { color: var(--red); border-bottom: 2px solid var(--red); font-weight: 650; }
@@ -127,7 +121,6 @@
 .money-account-label { display: flex; gap: 12px; align-items: center; }
 .money-account-icon, .money-merchant-icon { border-radius: 10px; background: #f4f4f4; color: #404040; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; }
 .money-merchant-icon { border-radius: 50%; }
-.money-account-icon.tips { background: #f3f3f3; color: var(--green); }
 .money-cash-total { margin: 12px -20px -20px; padding: 16px 20px; background: #f8f8f8; border-radius: 0 0 14px 14px; display: flex; justify-content: space-between; font-weight: 650; }
 
 .money-tx { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; border-radius: 0; background: none; }

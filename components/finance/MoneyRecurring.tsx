@@ -11,13 +11,13 @@ interface Props {
   month: string;
   cards: CardCharge[];
   bank: BankTx[];
-  tipsExcluded: boolean;
+
   onTransactions: (filters: MoneyTransactionFilters) => void;
   onOpenTransaction: (target: MoneyTransactionTarget) => void;
 }
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
-export function MoneyRecurring({ month, cards: monthCards, bank, tipsExcluded, onTransactions, onOpenTransaction }: Props) {
+export function MoneyRecurring({ month, cards: monthCards, bank, onTransactions, onOpenTransaction }: Props) {
   const [cards, setCards] = useState<CardCharge[] | null>(null);
   const [error, setError] = useState(false);
   const [view, setView] = useState<"list" | "calendar">("list");
@@ -57,7 +57,7 @@ export function MoneyRecurring({ month, cards: monthCards, bank, tipsExcluded, o
                   </div>
                 ))}
         </section><div className="money-stack">
-          <MoneyFrequentMerchants bank={bank} cards={monthCards} tipsExcluded={tipsExcluded} onMerchant={(query) => onTransactions({ range: "all", query })} />
+          <MoneyFrequentMerchants bank={bank} cards={monthCards} onMerchant={(query) => onTransactions({ range: "all", query })} />
           <section className="money-card"><h2>반복 결제 분석</h2><p className="money-note">여러 달에 걸쳐 사용한 가맹점을 찾습니다. 실제 결제 기록으로 패턴을 확인할 수 있습니다.</p><button type="button" onClick={() => setView("calendar")}>캘린더 보기 →</button></section>
         </div></div>
       ) : (

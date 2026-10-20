@@ -18,7 +18,6 @@ export interface ParsedCard {
   status: string;
   vat: number | null;
   item_name: string;
-  classification: string;
   remarks: string;
   transferred: string;
   amount: number | null;
@@ -41,7 +40,6 @@ export interface ParsedBankTx {
   status: string;
   memo: string;
   category: string;
-  tips_note: string;
   account_label: string;
   dedupe_key: string;
 }
@@ -202,7 +200,7 @@ export async function parseFinanceFile(file: File): Promise<ParseResult> {
         }
         // Two very different "상태" columns: the RAW KB 승인내역조회 carries the
         // APPROVAL state (정상/취소 — bookkeeping noise, park it in meta so the
-        // TIPS status starts 미확인), while the enriched 결제예정금액조회
+        // status starts empty), while the enriched 결제예정금액조회
         // worksheet carries the accountant's REAL classification
         // (처리불가/확인필요/접수완료…) which must import as the status.
         const isApprovalReport = has("승인구분");
@@ -221,7 +219,6 @@ export async function parseFinanceFile(file: File): Promise<ParseResult> {
           status: isApprovalReport ? "" : clean(r["상태"]),
           vat: toNumber(r["부가세"]),
           item_name: clean(r["명칭"]),
-          classification: clean(r["처리된 항목"]),
           remarks: clean(r["기타"]),
           transferred: clean(r["이체여부"]),
           amount,
@@ -259,7 +256,6 @@ export async function parseFinanceFile(file: File): Promise<ParseResult> {
           status: clean(r["상태"]),
           memo: clean(r["명칭"] ?? r["메모"]),
           category: clean(r["처리된 항목"]),
-          tips_note: clean(r["기타"]),
           account_label: clean(r["처리점"]) || "KB",
           dedupe_key: `b|${date} ${time}|${counterparty}|${withdrawal ?? 0}|${deposit ?? 0}|${balance ?? ""}`,
         });

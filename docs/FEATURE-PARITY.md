@@ -1,23 +1,23 @@
-# Finance source feature inventory
+# Finance final feature scope
 
-Source: original `src/components/finance/FinanceWorkspace.tsx` and its imported dependency closure. Original components are retained. Empty initial server database; user imports real records.
+The latest user scope supersedes the earlier research-finance inventory. The six original core screens retain their layout and underlying ledger behavior. New workspaces have no categories, rules, budgets or transactions.
 
-| Original feature | Port target | Verification |
+| Retained capability | Implementation | Verification |
 |---|---|---|
-| Home balances, cumulative flows, category summaries, transaction drilldown | FinanceWorkspace, MoneyDashboard, original money integrity modules | Domain totals/refund tests; build |
-| Recurring merchant grouping, frequency and spend review | MoneyRecurring | Original grouping functions; build |
-| Spend category charts/trends and month drilldown | MoneySpending, MoneyCharts | Original aggregation tests; build |
-| Category budgets, editing and comparison | MoneyBudget, finance budget contract | D1 save/read/validation/ownership |
-| Account balances and full bank history | MoneyAccounts | Original balance sorting; D1 reads |
-| Transaction filters, detail editing, categories, custom categories and rules | MoneyTransactions, MoneyTransactionDetail | D1 CRUD/ownership/invalid input preservation |
-| Internal/nonspend analysis and accounting split journal | legacy/SpendingTab, SplitModal | Original algorithms; D1 split ownership/integrity |
-| TIPS 9th–8th window, classification review and spreadsheet export | TipsTab | Window boundary tests; real AI adapter configuration errors |
-| Bank/card/Hometax Excel/CSV parser and duplicate import | original parse.ts + finance.ts contracts | Deterministic parser fixture; D1 duplicate persistence |
-| RCMS transfer upload and bank reconciliation | RcmsUploader, rcmsParse | Original matching tests; no company constants |
-| Receipt upload, filename matching, manual/AI review and links | EvidenceUploader, evidenceMatch, evidenceIntegrity | R2 file ownership; D1 links; actual external adapter |
-| Backup JSON and CSV/XLSX exports | original components/shared helpers | Build; no seeded records |
-| Request creation, request history, follow-up evidence, documents | Original Lumos components and requirement catalogs | Owner-scoped D1 requests; R2 documents; explicit external configuration |
-| AI classify, journal, invoice extraction, receipt split, bot review | Authenticated server adapters | Missing-key error; no paid calls in tests |
-| RCMS companion registration and generated request forms | Authenticated integration and forms APIs | Missing-user-owned integration setup; gaps documented |
+| Dashboard, cumulative card spend, recent transactions and category drilldown | FinanceWorkspace, MoneyDashboard, MoneyCharts | Domain totals, build, authenticated SSR |
+| Three-month recurring merchant history | MoneyRecurring, recurringMerchants | Deterministic grouping test |
+| Spending categories, monthly comparison and trend | MoneySpending | Card cancellation/unknown-amount/split totals |
+| Category budgets | MoneyBudget | Actual D1 save/read, validation and HTTP persistence |
+| Source-file account groups, bank balances, domestic/foreign cards | MoneyAccounts | Latest chronological balance anchor, gaps, ordering and month cutoff |
+| Ledger filtering, detail, memo, manual journal fields, CSV | MoneyTransactions, MoneyTransactionDetail | Owner-scoped reads/writes, atomic field patch, explicit null |
+| User category create/read/rename/delete | SpendRulesModal, D1 finance_categories | Linked record/rule/budget rename; in-use deletion rejection; owner isolation |
+| User rule create/read/edit/delete, exact/contains, priority | SpendRulesModal, rules domain/server | Priority/ties, normalization, no match, no rules, missing owner category, real D1 persistence |
+| Rule preview/apply, new-import rules | /api/rules, /api/data | Preview is read-only, only unclassified records updated, manual and other-owner values preserved |
+| Bank/card/Hometax XLSX/XLS/CSV parsing and duplicate import | Original parse.ts, data contracts | Deterministic parser, duplicate key and invalid batch preservation |
+| Manual splits, evidence upload/filename suggestion/confirmed linking | SplitModal, EvidenceUploader, R2 and D1 | Parent ownership, total integrity, invalid replacement preservation, R2 bytes/auth |
+| CSV and JSON backup | Core UI and retained data contracts | Build; user-owned ledger export |
+| Optional explicit AI category suggestions | /api/finance/spend-classify | Only persisted owner category keys/transaction IDs accepted; missing credentials observable |
 
-Settings replace project/company metadata, business registration number and private merchant aliases; account suffixes are removed. Original Supabase transport is replaced by an owner-scoped server contract backed by D1; no localStorage business records. Actual evidence and remaining integration gaps are recorded in IMPLEMENTATION-REPORT.md.
+Removed, rather than hidden: TIPS worksheet/toggle/flags/refund pairing/window/export, research requests/history/follow-up evidence/forms, internal/nonspend screen, RCMS upload/registration/runner adapter, grant/company settings and their API/component/dependency trees. No built-in category catalog, company merchant keyword rules or silent classification fallback remains. General transaction receipt evidence remains available; it is separate from the removed research follow-up product.
+
+Card net spending and bank cash flow remain separate measures. Bank account identity is the user-readable source filename, not special grant/account keywords. User categories are arbitrary labels and do not silently exclude transactions from aggregates. In-use categories must be detached before deletion; renames update existing references atomically.

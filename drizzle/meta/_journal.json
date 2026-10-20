@@ -15,6 +15,13 @@
       "when": 1792498893560,
       "tag": "0001_flawless_carnage",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792501521851,
+      "tag": "0002_complete_hiroim",
+      "breakpoints": true
     }
   ]
 }

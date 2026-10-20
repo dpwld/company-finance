@@ -17,8 +17,7 @@ interface Props {
   bank: BankTx[];
   cards: CardCharge[];
   splits: ChargeSplit[];
-  /** TIPS 지원금 집행분을 지출에서 뺄지 (헤더 토글). */
-  tipsExcluded: boolean;
+
   onNav: (id: string) => void;
   onReview: () => void;
   onOpenTransaction: (target: MoneyTransactionTarget) => void;
@@ -30,7 +29,7 @@ const prevMonthOf = (month: string): string => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-export function MoneyDashboard({ month, bank, cards, splits, tipsExcluded, onNav, onReview, onOpenTransaction }: Props) {
+export function MoneyDashboard({ month, bank, cards, splits, onNav, onReview, onOpenTransaction }: Props) {
   // 미분류 거래를 한 장씩 밀어서 분류하는 화면 (Rocket Money Category Review)
   const [bankHistory, setBankHistory] = useState<BankTx[]>(bank);
   useEffect(() => { let alive = true; fetchMoneyBankHistory().then((rows) => { if (alive) setBankHistory(rows); }).catch(() => {}); return () => { alive = false; }; }, [bank]);
@@ -46,11 +45,11 @@ export function MoneyDashboard({ month, bank, cards, splits, tipsExcluded, onNav
   }, [month]);
   const prev = loaded?.month === month ? loaded : null;
 
-  const totals = useMemo(() => moneyTotals(cards, bank, tipsExcluded, splits), [cards, bank, tipsExcluded, splits]);
-  const current = useMemo(() => cumulativeMoney(moneyEntries(cards, bank, tipsExcluded), month), [bank, cards, tipsExcluded, month]);
+  const totals = useMemo(() => moneyTotals(cards, bank, splits), [cards, bank, splits]);
+  const current = useMemo(() => cumulativeMoney(moneyEntries(cards, bank), month), [bank, cards, month]);
   const previous = useMemo(
-    () => cumulativeMoney(moneyEntries(prev?.cards ?? [], prev?.bank ?? [], tipsExcluded), prevMonthOf(month)),
-    [prev, tipsExcluded, month],
+    () => cumulativeMoney(moneyEntries(prev?.cards ?? [], prev?.bank ?? []), prevMonthOf(month)),
+    [prev, month],
   );
 
   const spent = totals.spending;
@@ -58,8 +57,8 @@ export function MoneyDashboard({ month, bank, cards, splits, tipsExcluded, onNav
   const diff = spent - prevSpent;
 
   const accounts = useMemo(() => accountBalances(bankHistory, month), [bankHistory, month]);
-  const recent = useMemo(() => moneyTransactionRows(cards, bank, tipsExcluded)
-    .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5), [cards, bank, tipsExcluded]);
+  const recent = useMemo(() => moneyTransactionRows(cards, bank)
+    .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5), [cards, bank]);
 
   const topCategories = useMemo(
     () => Object.entries(totals.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 6),
@@ -70,7 +69,7 @@ export function MoneyDashboard({ month, bank, cards, splits, tipsExcluded, onNav
     <div className="money-dash">
       <div className="money-stack">
         <section className="money-card">
-          <p className="money-label">{tipsExcluded ? "이번 달 자체 부담액" : "이번 달 카드 순사용액"}</p>
+          <p className="money-label">이번 달 카드 순사용액</p>
           <div className="money-amount">{wonFmt(spent)}</div>
           <p className={`money-trend${diff > 0 ? " money-negative" : ""}`}>
             {prev === null ? "전월과 비교하는 중입니다."
@@ -112,11 +111,11 @@ export function MoneyDashboard({ month, bank, cards, splits, tipsExcluded, onNav
       </div>
 
       <div className="money-stack">
-        <MoneyNeedsCategory bank={bank} cards={cards} tipsExcluded={tipsExcluded} onReview={onReview} />
+        <MoneyNeedsCategory bank={bank} cards={cards} onReview={onReview} />
 
         <MoneyBalanceCard accounts={accounts} cards={cards} />
 
-        <MoneySummary bank={bank} cards={cards} splits={splits} tipsExcluded={tipsExcluded} />
+        <MoneySummary bank={bank} cards={cards} splits={splits} />
 
         <section className="money-card">
           <div className="money-card-header">

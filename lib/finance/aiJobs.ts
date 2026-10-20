@@ -4,7 +4,7 @@
 
    주의: 페이지를 새로고침하거나 탭을 닫으면 중단된다 — 브라우저 안에서만 사는 작업이다. */
 
-export type JobKey = "tips-classify" | "spend-classify" | "journal" | "evidence-upload";
+export type JobKey = "spend-classify";
 
 export interface JobState {
   running: boolean;

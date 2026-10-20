@@ -16,7 +16,7 @@ interface Props {
   bank: BankTx[];
   cards: CardCharge[];
   splits: ChargeSplit[];
-  tipsExcluded: boolean;
+
 }
 
 /** 남은 예산 링 — 쓴 비율만큼 채운다. */
@@ -44,7 +44,7 @@ export function parseBudgetAmount(raw: string): number {
   return amount;
 }
 
-export function MoneyBudget({ month, bank, cards, splits, tipsExcluded }: Props) {
+export function MoneyBudget({ month, bank, cards, splits }: Props) {
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   const [budget, setBudget] = useState<Record<string, number>>({});
   const [draft, setDraft] = useState<Record<string, string>>({});
@@ -60,12 +60,12 @@ export function MoneyBudget({ month, bank, cards, splits, tipsExcluded }: Props)
     return () => { alive = false; };
   }, []);
 
-  const totals = useMemo(() => moneyTotals(cards, bank, tipsExcluded, splits), [cards, bank, tipsExcluded, splits]);
+  const totals = useMemo(() => moneyTotals(cards, bank, splits), [cards, bank, splits]);
   const actual = totals.byCategory;
 
   /* 예산을 잡은 카테고리를 먼저, 그다음 이 달에 쓴 카테고리를 금액 순으로. */
   const rows = useMemo(() => {
-    const keys = [...new Set([...SPEND_CATEGORIES.map((c) => c.key), ...customCategories, ...Object.keys(budget), ...Object.keys(actual)])].filter((key) => key !== "tips_refund")
+    const keys = [...new Set([...SPEND_CATEGORIES.map((c) => c.key), ...customCategories, ...Object.keys(budget), ...Object.keys(actual)])].filter(Boolean)
       .sort((a, b) => (budget[b] ?? 0) - (budget[a] ?? 0) || (actual[b] ?? 0) - (actual[a] ?? 0));
     return keys.map((key) => {
       const cat = SPEND_CATEGORIES.find((c) => c.key === key);
@@ -101,11 +101,11 @@ export function MoneyBudget({ month, bank, cards, splits, tipsExcluded }: Props)
       <section className="money-card">
         <div className="money-card-header">
           <h2>월 지출 예산</h2>
-          <span className="money-tag">{Number(month.slice(5, 7))}월 · {tipsExcluded ? "자체 부담액" : "카드 순사용액"}</span>
+          <span className="money-tag">{Number(month.slice(5, 7))}월 · 카드 순사용액</span>
         </div>
         {totals.unknownAmountCount > 0 && <p className="money-note money-negative">원화 미확정 {totals.unknownAmountCount}건은 사용액에 포함되지 않았습니다.</p>}
         {error && <p role="alert" className="money-note money-negative">{error}</p>}
-        {rows.length === 0 ? <p className="money-empty">이 달에 분류된 지출이 없습니다.</p> : (
+        {rows.length === 0 ? <p className="money-empty">분류 규칙에서 카테고리를 먼저 만들면 예산을 설정할 수 있습니다.</p> : (
           <div className="money-table-wrap">
             <table>
               <thead>
@@ -158,7 +158,7 @@ export function MoneyBudget({ month, bank, cards, splits, tipsExcluded }: Props)
         )}
         <div className="money-summary-row"><span className="money-muted">설정한 예산</span><span style={{ fontWeight: 650 }}>{wonFmt(planTotal)}</span></div>
         <div className="money-summary-row"><span className="money-muted">이 달 지출</span><span style={{ fontWeight: 650 }}>{wonFmt(usedTotal)}</span></div>
-        <p className="money-note">선택한 기준의 전체 지출을 반영합니다. 미분류도 포함하며 확인된 TIPS 환급은 전체 부담액에서 차감합니다.</p>
+        <p className="money-note">카드 순사용액을 반영합니다. 미분류도 포함하며 통장 출금은 별도 집계합니다.</p>
       </section>
     </div>
   );
