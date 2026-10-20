@@ -1,0 +1,98 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "835e6beb-df0c-4858-9f81-d1fe045d36b6",
+  "prevId": "5f3052a3-a56c-4c95-b2a4-c9f48b7b9701",
+  "tables": {
+    "finance_records": {
+      "name": "finance_records",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner": {
+          "name": "owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "dedupe": {
+          "name": "dedupe",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "refund_source": {
+          "name": "refund_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "finance_record_identity": {
+          "name": "finance_record_identity",
+          "columns": [
+            "owner",
+            "kind",
+            "id"
+          ],
+          "isUnique": true
+        },
+        "finance_record_dedupe": {
+          "name": "finance_record_dedupe",
+          "columns": [
+            "owner",
+            "kind",
+            "dedupe"
+          ],
+          "isUnique": true
+        },
+        "finance_refund_source": {
+          "name": "finance_refund_source",
+          "columns": [
+            "owner",
+            "refund_source"
+          ],
+          "isUnique": true,
+          "where": "\"finance_records\".\"refund_source\" IS NOT NULL"
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

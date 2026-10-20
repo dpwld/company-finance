@@ -1,0 +1,2 @@
+ALTER TABLE `finance_records` ADD `refund_source` text;--> statement-breakpoint
+CREATE UNIQUE INDEX `finance_refund_source` ON `finance_records` (`owner`,`refund_source`) WHERE "finance_records"."refund_source" IS NOT NULL;

@@ -1,0 +1,273 @@
+/* Finance 화면 — 시안(pulse-money-source/web/styles.css)을 그대로 옮긴 것.
+   시안은 독립 페이지라 body·aside·main 같은 전역 선택자를 쓴다. Pulse 안에서는
+   다른 화면으로 새면 안 되므로 전부 .money-root 아래로 좁혔다.
+   시안 CSS가 기본값 → 덮어쓰기 순으로 여러 겹이라, 여기서는 최종으로 적용되는
+   값만 한 번에 적는다(죽은 규칙을 옮겨 적으면 나중에 뭘 고쳐야 할지 흐려진다). */
+
+.money-root {
+  --red: #616161;
+  --purple: #616161;
+  --ink: #232323;
+  --sub: #797979;
+  --line: #eeeeee;
+  --bg: #f6f6f6;
+  --green: #696969;
+
+  display: grid;
+  grid-template-columns: 164px minmax(0, 1fr);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 70vh;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.money-root * { box-sizing: border-box; }
+.money-root button, .money-root input, .money-root select, .money-root textarea { font: inherit; }
+.money-root button { cursor: pointer; border: 1px solid var(--line); background: #ffffff; border-radius: 10px; padding: 9px 14px; color: var(--ink); }
+.money-root button:hover { background: #f2f2f2; }
+.money-root button:disabled { opacity: 0.4; cursor: default; }
+.money-root a { color: var(--red); }
+.money-root :focus-visible { outline: 3px solid #616161; outline-offset: 3px; }
+
+/* ── 세로 내비게이션 ───────────────────────────────── */
+.money-aside {
+  background: #ffffff;
+  border-right: 1px solid var(--line);
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+}
+.money-brand {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 2px 18px;
+  font-weight: 750;
+  font-size: 16px;
+  letter-spacing: -0.4px;
+  line-height: 1.12;
+}
+.money-brand b {
+  background: var(--red);
+  color: #ffffff;
+  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  transform: rotate(-9deg);
+}
+.money-brand small { display: block; color: var(--sub); font-size: 10px; font-weight: 500; letter-spacing: 0.4px; margin-top: 3px; }
+.money-nav { display: grid; gap: 3px; }
+.money-nav button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 7px 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.money-nav button.active { background: #f4f4f4; color: #404040; font-weight: 650; }
+.money-nav span { font-size: 14px; min-width: 16px; }
+.money-profile { margin-top: auto; padding: 12px 4px; color: var(--sub); font-size: 11px; line-height: 1.45; }
+.money-avatar { height: 24px; width: 24px; font-size: 11px; background: #f4f4f4; color: var(--red); border-radius: 50%; display: inline-grid; place-items: center; margin-right: 6px; font-weight: 650; }
+
+/* ── 본문 ─────────────────────────────────────────── */
+.money-main { padding: 22px 26px; min-width: 0; }
+.money-header { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 20px; }
+.money-header h1 { font-size: 21px; font-weight: 650; letter-spacing: -0.5px; margin: 0 0 3px; white-space: nowrap; }
+.money-sub { font-size: 12px; color: var(--sub); }
+.money-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.money-actions button { font-size: 12px; padding: 6px 9px; border-radius: 8px; }
+.money-month { display: flex; gap: 4px; align-items: center; }
+.money-month button { padding: 5px 9px; }
+.money-month select { border: 0; background: none; padding: 6px; font-weight: 600; font-size: 13px; }
+
+/* TIPS 지원금 제외 토글 */
+.money-tips-toggle { display: flex; align-items: center; gap: 7px; white-space: nowrap; border: 1px solid var(--line); font-size: 12px; }
+.money-switch { width: 30px; height: 18px; background: #d9d9d9; border-radius: 20px; position: relative; flex-shrink: 0; }
+.money-switch::before { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; background: #ffffff; border-radius: 50%; transition: transform 0.15s; }
+.money-tips-toggle[aria-checked="true"] { background: #f4f4f4; color: #404040; border-color: #e7e7e7; }
+.money-tips-toggle[aria-checked="true"] .money-switch { background: var(--red); }
+.money-tips-toggle[aria-checked="true"] .money-switch::before { transform: translateX(12px); }
+
+/* ── 카드·레이아웃 ────────────────────────────────── */
+.money-card { background: #ffffff; border: 0; border-radius: 14px; padding: 20px; min-width: 0; box-shadow: 0 1px 2px #20232904; }
+.money-card-header { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 14px; position: relative; z-index: 1; }
+.money-card-header h2 { font-size: 15px; margin: 0; font-weight: 650; }
+.money-label { font-size: 12px; color: var(--sub); letter-spacing: 1px; font-weight: 650; margin: 0 0 14px; }
+.money-dash { display: grid; grid-template-columns: 1.25fr 1fr; gap: 18px; }
+.money-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; }
+.money-stack { display: grid; gap: 18px; align-content: start; }
+.money-section-gap { margin-top: 22px; }
+.money-amount { font-size: 31px; letter-spacing: -1.5px; font-weight: 600; line-height: 1.25; margin: 13px 0; }
+.money-trend { font-size: 13px; color: var(--green); }
+.money-negative { color: #5d5d5d; }
+.money-note { font-size: 12px; color: var(--sub); margin-top: 16px; line-height: 1.7; }
+.money-muted { color: var(--sub); }
+.money-right { text-align: right; }
+.money-empty { text-align: center; padding: 40px; color: var(--sub); }
+
+/* 섹션 안 서브탭 (요약 / 일반 통장 / TIPS 통장 …) */
+.money-tabs { display: flex; gap: 24px; border-bottom: 1px solid #e5e5e5; margin-bottom: 24px; }
+.money-tabs button { border: 0; background: transparent; border-radius: 0; padding: 12px 2px; color: var(--sub); }
+.money-tabs button.active { color: var(--red); border-bottom: 2px solid var(--red); font-weight: 650; }
+
+/* 계좌·거래 줄 */
+.money-account-row { display: flex; justify-content: space-between; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.money-account-row:last-child { border: 0; }
+.money-account-label { display: flex; gap: 12px; align-items: center; }
+.money-account-icon, .money-merchant-icon { border-radius: 10px; background: #f4f4f4; color: #404040; display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; }
+.money-merchant-icon { border-radius: 50%; }
+.money-account-icon.tips { background: #f3f3f3; color: var(--green); }
+.money-cash-total { margin: 12px -20px -20px; padding: 16px 20px; background: #f8f8f8; border-radius: 0 0 14px 14px; display: flex; justify-content: space-between; font-weight: 650; }
+
+.money-tx { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; border-radius: 0; background: none; }
+.money-tx:last-child { border-bottom: 0; }
+.money-tx:hover { background: #fafafa; }
+.money-merchant-info { flex: 1; min-width: 0; }
+.money-merchant-name { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.money-tx-amount { font-size: 14px; font-weight: 650; white-space: nowrap; }
+
+.money-text-button { border: 0; background: transparent; padding: 0; color: var(--red); font-size: 13px; }
+.money-summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.money-summary-row:last-child { border: 0; }
+
+/* 분류 필요 */
+.money-needs { border: 1px solid #e7e7e7; background: #ffffff; }
+.money-needs .money-label { color: #404040; }
+.money-review-banner { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; background: #f4f4f4; border-radius: 10px; margin: 15px 0; }
+.money-review-banner button { white-space: nowrap; flex-shrink: 0; }
+.money-primary { background: var(--red); border-color: var(--red); color: #ffffff; }
+.money-primary:hover { background: #4e4e4e; }
+
+/* 차트 */
+.money-chart { width: 100%; height: 200px; display: block; margin: 15px 0 4px; }
+.money-balance-spark { width: 100%; height: 205px; }
+.money-legend { display: flex; gap: 20px; font-size: 12px; color: var(--sub); }
+.money-legend i { display: inline-block; width: 14px; height: 4px; background: var(--purple); border-radius: 4px; margin-right: 6px; vertical-align: middle; }
+.money-donut-layout { display: grid; grid-template-columns: 1fr; justify-items: center; padding: 20px 0; }
+.money-donut { width: 215px; height: 215px; border-radius: 50%; position: relative; display: grid; place-items: center; }
+.money-donut::before { content: ""; position: absolute; inset: 31px; border-radius: 50%; background: #ffffff; }
+.money-donut-center { position: relative; text-align: center; }
+.money-donut-center strong { display: block; font-size: 22px; letter-spacing: -1px; }
+.money-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 10px; }
+.money-month-bars { display: flex; align-items: flex-end; gap: 12px; min-height: 132px; padding-top: 10px; margin-bottom: 26px; }
+.money-month-bars button { border: 0; background: none; min-width: 42px; flex: 1; padding: 0; }
+.money-month-bars .money-column { background: #e7e7e7; border-radius: 5px 5px 0 0; margin: 8px auto; width: 65%; max-width: 58px; }
+.money-month-bars .selected .money-column { background: var(--red); }
+.money-bar { height: 7px; background: #f1f1f1; border-radius: 5px; overflow: hidden; }
+.money-bar div { height: 100%; border-radius: 5px; background: var(--purple); }
+
+/* 표 */
+.money-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0 20px; }
+.money-toolbar input, .money-toolbar select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: #ffffff; min-width: 140px; }
+.money-toolbar input { flex: 1; }
+.money-table-wrap { overflow: auto; }
+.money-root table { width: 100%; border-collapse: collapse; font-size: 14px; white-space: nowrap; }
+.money-root th { font-weight: 500; text-align: left; color: var(--sub); padding: 10px 9px; border-bottom: 1px solid var(--line); background: #fbfbfb; }
+.money-root td { padding: 11px 9px; border-bottom: 1px solid var(--line); }
+.money-table-wrap tbody tr { height: 52px; cursor: pointer; }
+.money-table-wrap tbody tr:hover { background: #fafafa; }
+.money-pager { display: flex; justify-content: space-between; align-items: center; margin-top: 17px; font-size: 13px; color: var(--sub); }
+
+/* 예산 */
+.money-budget-input { width: 135px; border: 1px solid var(--line); border-radius: 7px; padding: 8px; }
+
+/* 결제 캘린더 */
+.money-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.money-calendar-cell { background: #ffffff; min-height: 105px; padding: 10px; font-size: 13px; }
+.money-calendar-cell button { display: block; width: 100%; font-size: 10px; margin-top: 6px; padding: 4px; color: var(--red); background: #f4f4f4; border: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.money-pill { background: #fbfbfb; border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin: 12px 0; }
+.money-tag { background: #f1f1f1; border-radius: 20px; padding: 4px 9px; font-size: 12px; display: inline-block; color: #666666; }
+.money-tag.red { background: #f4f4f4; color: var(--red); }
+.money-tag.green { color: var(--green); background: #f3f3f3; }
+.money-privacy { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 16px; color: var(--sub); font-size: 12px; display: flex; justify-content: space-between; gap: 12px; }
+
+@media (max-width: 1100px) {
+  .money-root { grid-template-columns: 152px minmax(0, 1fr); }
+  .money-aside { width: auto; padding: 16px 8px; }
+  .money-main { padding: 24px; }
+  .money-dash, .money-grid { grid-template-columns: 1fr; }
+  .money-month-bars { gap: 8px; }
+}
+@media (max-width: 760px) {
+  .money-root { grid-template-columns: 1fr; }
+  .money-aside { padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .money-brand, .money-profile { display: none; }
+  .money-nav { display: flex; flex-wrap: wrap; gap: 4px; }
+  .money-nav button { flex-direction: column; gap: 2px; font-size: 11px; padding: 7px 9px; }
+  .money-nav span { font-size: 18px; }
+  .money-main { padding: 20px 15px; }
+  .money-header { align-items: flex-start; flex-direction: column; }
+  .money-amount { font-size: 32px; }
+  .money-donut { width: 230px; height: 230px; }
+  .money-cash-total { margin: 15px -20px -20px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .money-card { animation: money-enter 0.25s ease-out; }
+  @keyframes money-enter { from { opacity: 0.5; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+
+/* ---- 분류 검토 (Rocket Money Category Review) ---- */
+.money-review-backdrop {
+  position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+  background: #20232966; padding: 24px; backdrop-filter: blur(2px);
+}
+.money-review-sheet {
+  background: #ffffff; border-radius: 16px; padding: 22px; width: min(430px, 100%);
+  max-height: calc(100vh - 48px); overflow: auto; box-shadow: 0 18px 50px #2023291f;
+}
+.money-review-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.money-review-close { border: 0; background: transparent; padding: 4px 8px; color: var(--sub); font-size: 15px; }
+.money-review-bar { height: 4px; border-radius: 4px; background: var(--line); margin-top: 16px; overflow: hidden; }
+.money-review-bar span { display: block; height: 100%; background: var(--red); transition: width .2s; }
+.money-review-error { color: #5d5d5d; font-size: 12px; margin: 10px 0 0; }
+
+.money-review-stage { position: relative; margin: 18px 0 16px; }
+.money-review-card {
+  position: relative; border: 1px solid var(--line); border-radius: 14px; padding: 22px;
+  background: #ffffff; text-align: center; touch-action: none; user-select: none; cursor: grab;
+  box-shadow: 0 2px 10px #2023290a;
+}
+.money-review-card:active { cursor: grabbing; }
+.money-review-card .money-merchant-icon { margin: 0 auto 12px; }
+.money-review-card.behind {
+  position: absolute; inset: 10px -6px -10px -6px; z-index: -1; padding: 0;
+  background: #f8f8f8; border-color: #f1f1f1; box-shadow: none;
+}
+.money-review-name { font-size: 18px; font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+.money-review-chip {
+  display: inline-block; border-radius: 999px; padding: 7px 15px; font-size: 13px; font-weight: 650;
+}
+.money-review-cue {
+  position: absolute; top: 16px; font-size: 12px; font-weight: 700; letter-spacing: .4px;
+  border-radius: 8px; padding: 5px 10px; pointer-events: none; transition: opacity .12s;
+}
+.money-review-cue.left { left: 14px; background: #f4f4f4; color: #404040; }
+.money-review-cue.right { right: 14px; background: #f3f3f3; color: var(--green); }
+
+.money-review-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.money-review-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.money-review-cat { text-align: left; font-size: 13px; padding: 10px 12px; border-radius: 10px; }
+
+.money-review-done { text-align: center; padding: 28px 0 8px; }
+.money-review-done-mark {
+  width: 48px; height: 48px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center;
+  background: #f3f3f3; color: var(--green); font-size: 22px; font-weight: 700;
+}
+
+.money-category-picker { display: grid; gap: 16px; }
+.money-category-picker input:not([type="radio"]), .money-category-picker button { padding: 8px 12px; border: 1px solid var(--border-subtle); border-radius: 8px; }
+.money-category-picker input:not([type="radio"]) { min-width: 0; flex: 1; }
+.money-category-options { display: flex; flex-wrap: wrap; gap: 8px; max-height: 240px; overflow: auto; }
+.money-category-options button[aria-pressed="true"] { background: #f1f1f1; border-color: #616161; color: #404040; }

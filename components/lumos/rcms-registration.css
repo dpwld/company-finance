@@ -1,0 +1,21 @@
+.lm-rcms { margin: 0 26px 22px; padding: 18px 20px; border: 1px solid #e5e5e5; border-radius: 10px; background: #fbfbfb; color: #434343; }
+.lm-rcms-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.lm-rcms h2 { margin: 0 0 4px; font-size: 15px; }
+.lm-rcms-heading p, .lm-rcms-muted { margin: 0; color: #757575; font-size: 12px; }
+.lm-rcms-refresh { flex: none; border: 0; padding: 3px 0; background: transparent; color: #6d6d6d; font-size: 11px; }
+.lm-rcms-status { display: flex; flex-direction: column; gap: 3px; margin-top: 13px; padding: 11px 13px; border-radius: 7px; background: #ffffff; border: 1px solid #ececec; font-size: 12px; }
+.lm-rcms-status span { color: #6f6f6f; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lm-rcms-muted { margin-top: 12px; }
+.lm-rcms-hint, .lm-rcms-error { margin: 11px 0 0; color: #6c6c6c; font-size: 11px; }
+.lm-rcms-error { color: #5d5d5d; }
+.lm-rcms-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.lm-rcms-start, .lm-rcms-verify { min-height: 36px; border: 1px solid #737373; border-radius: 6px; padding: 0 17px; background: #737373; color: #ffffff; font-size: 12px; font-weight: 600; }
+.lm-rcms-verify { border-color: #cbcbcb; background: #ffffff; color: #5f5f5f; }
+.lm-rcms-start:disabled, .lm-rcms-verify:disabled { opacity: .5; cursor: not-allowed; }
+.lm-rcms-verify-note { margin: 6px 0 0; color: #757575; font-size: 11px; }
+.lm-rcms-result { margin-top: 13px; padding: 13px; border: 1px solid #e3e3e3; border-radius: 7px; background: #ffffff; font-size: 12px; }
+.lm-rcms-result dl { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 5px 12px; margin: 9px 0 0; }
+.lm-rcms-result dt { color: #858585; }
+.lm-rcms-result dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.lm-rcms-result a { display: inline-block; margin-top: 8px; color: #6d6d6d; }
+@media (max-width: 760px) { .lm-rcms { margin: 0 14px 16px; padding: 15px; } .lm-rcms-heading { flex-direction: column; gap: 6px; } }
